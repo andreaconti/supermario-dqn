@@ -1,5 +1,6 @@
 gym
 gym-super-mario-bros
+jupyter
 matplotlib
 numpy
 pillow
