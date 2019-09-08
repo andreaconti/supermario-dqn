@@ -154,13 +154,14 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, gamma=0.999, e
         batch = _Transition(*zip(*transitions))
 
         non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
-                                                batch.next_state)), device=device, dtype=torch.uint8)
-        non_final_next_states = torch.cat([s for s in batch.next_state if s is not None])
-        state_batch = torch.cat(batch.state)
+                                                batch.next_state)), device=device, dtype=torch.bool)
+        non_final_next_states = torch.stack([s for s in batch.next_state if s is not None])
+        state_batch = torch.stack(batch.state)
         action_batch = torch.cat(batch.action)
         reward_batch = torch.cat(batch.reward)
 
-        state_action_values = policy_net(state_batch).gather(1, action_batch)
+        state_action_values = policy_net(state_batch)
+        state_action_values = state_action_values.gather(1, action_batch)
 
         next_state_values = torch.zeros(batch_size, device=device)
         next_state_values[non_final_mask] = target_net(non_final_next_states).max(1)[0].detach()
@@ -168,31 +169,31 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, gamma=0.999, e
 
         loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
 
-        if verbose > 0:
+        if verbose > 1:
             print(f"Fitting, loss: {loss.mean()}")
 
         optimizer.zero_grad()
         loss.backward()
-        # for param in policy_net.parameters():
-        #    param.grad.data.clamp_(-1, 1)
+        for param in policy_net.parameters():
+            param.grad.data.clamp_(-1, 1)
         optimizer.step()
 
     # training loop
     for i_episode in range(num_episodes):
         episode_reward = 0
-        curr_state = preprocess(env.reset())
+        curr_state = env.reset()
         done = False
         while not done:
-            action = select_action(curr_state.to(device))
+            action = select_action(curr_state.unsqueeze(0).to(device))
             next_state, reward, done, _ = env.step(action.item())
-            reward = torch.tensor([reward], device=device)
+            reward = torch.tensor([reward], device=device, dtype=torch.float32)
             episode_reward += reward
 
             if done:
                 next_state = None
 
             # Store the transition in memory
-            memory.push(curr_state, action, next_state.to(device), reward)
+            memory.push(_Transition(curr_state.to(device), action, next_state.to(device), reward))
             curr_state = next_state
 
             # Perform one step of the optimization (on the target network)
