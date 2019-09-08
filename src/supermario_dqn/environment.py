@@ -7,8 +7,9 @@ from typing import Callable
 
 import gym_super_mario_bros as gym
 import torch
-from gym_super_mario_bros.actions import COMPLEX_MOVEMENT
 from nes_py.wrappers import JoypadSpace
+
+__all__ = ['State', 'MarioEnvironment']
 
 State = torch.Tensor
 
@@ -19,10 +20,13 @@ class MarioEnvironment():
     """
 
     def __init__(self, n_frames: int, preprocess: Callable = None):
+
+        from gym_super_mario_bros.actions import COMPLEX_MOVEMENT
+
         self._preprocess = preprocess
         self.n_frames = n_frames
         self.actions = COMPLEX_MOVEMENT
-        self._env = JoypadSpace(gym.make('SuperMarioBros-v0'), COMPLEX_MOVEMENT)
+        self._env = JoypadSpace(gym.make('SuperMarioBros-v0'), self.actions)
 
     def reset(self) -> State:
         frame = self._env.reset()

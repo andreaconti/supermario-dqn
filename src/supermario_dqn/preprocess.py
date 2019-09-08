@@ -27,4 +27,4 @@ def preprocess(tensor):
         transforms.ToPILImage(),
         transforms.Resize([60, 110]),
         transforms.ToTensor()
-    ])(state_)
+    ])(state_)[0]

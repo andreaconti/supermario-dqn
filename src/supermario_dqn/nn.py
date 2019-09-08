@@ -8,7 +8,7 @@ import typing
 from collections import namedtuple
 
 import torch
-import torch.functional as F
+import torch.nn.functional as F
 from torch import nn, optim
 
 from supermario_dqn.environment import MarioEnvironment
@@ -51,7 +51,7 @@ class DQN(nn.Module):
     class of the used Q-value Neural Network
     """
 
-    def __init__(self, channels, height, width, outputs):
+    def __init__(self, channels: int, height: int, width: int, outputs: int):
         super(DQN, self).__init__()
 
         # parameters
@@ -61,7 +61,7 @@ class DQN(nn.Module):
         self._width = width
 
         # CNN
-        self.conv1 = nn.Conv2d(channels, 64, kernel_size=5, stride=1)
+        self.conv1 = nn.Conv2d(channels, 64, kernel_size=5, stride=2)
         self.bn1 = nn.BatchNorm2d(64)
         self.conv2 = nn.Conv2d(64, 32, kernel_size=5, stride=2)
         self.bn2 = nn.BatchNorm2d(32)
@@ -72,21 +72,25 @@ class DQN(nn.Module):
         convw = DQN._conv2d_size_out(DQN._conv2d_size_out(DQN._conv2d_size_out(width)))
         convh = DQN._conv2d_size_out(DQN._conv2d_size_out(DQN._conv2d_size_out(height)))
         linear_input_size = convw * convh * 32
-        self.head = nn.Linear(linear_input_size, outputs)
+        self.fc1 = nn.Linear(linear_input_size, 512)
+        self.head = nn.Linear(512, outputs)
 
-    def _conv2d_size_out(size, kernel_size=5, stride=2):
+    def _conv2d_size_out(size: int, kernel_size: int = 5, stride: int = 2):
         return (size - (kernel_size - 1) - 1) // stride + 1
 
     def forward(self, x):
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
-        return self.head(x.view(x.size(0), -1))
+        x = F.relu(self.fc1(x.view(x.size(0), -1)))
+        x = self.head(x)
+        return x
 
 
 # FUNCTIONS
 
-def create(size: typing.List[int], outputs, load_state_from: str = None) -> DQN:
+def create(size: typing.List[int], outputs: int,
+           load_state_from: str = None, for_train=False) -> DQN:
     """
     create model
     """
@@ -97,6 +101,10 @@ def create(size: typing.List[int], outputs, load_state_from: str = None) -> DQN:
 
     if load_state_from is not None:
         dqn.load_state_dict(torch.load(load_state_from))
+
+    if not for_train:
+        dqn.eval()
+
     return dqn
 
 
