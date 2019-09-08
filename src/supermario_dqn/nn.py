@@ -189,12 +189,11 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, gamma=0.999, e
             reward = torch.tensor([reward], device=device, dtype=torch.float32)
             episode_reward += reward
 
-            if done:
-                next_state = None
-
-            # Store the transition in memory
-            memory.push(_Transition(curr_state.to(device), action, next_state.to(device), reward))
-            curr_state = next_state
+            if not done:
+                memory.push(_Transition(curr_state.to(device), action, next_state.to(device), reward))
+                curr_state = next_state
+            else:
+                memory.push(_Transition(curr_state.to(device), action, None, reward))
 
             # Perform one step of the optimization (on the target network)
             optimize_model()
