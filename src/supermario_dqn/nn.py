@@ -116,7 +116,7 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, gamma=0.999, e
     Handles training of network
     """
 
-    n_actions = env.n_actions.n
+    n_actions = env.n_actions
     assert(n_actions == policy_net._outputs)
 
     # switch to CPU or GPU
@@ -134,10 +134,9 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, gamma=0.999, e
     steps_done = 0
 
     def select_action(state):
-        global steps_done
+        nonlocal steps_done
         sample = random.random()
-        eps_threshold = eps_end + (eps_start - eps_end) * \
-            math.exp(-1. * steps_done / eps_decay)
+        eps_threshold = eps_end + (eps_start - eps_end) * math.exp(-1. * steps_done / eps_decay)
         steps_done += 1
         if sample > eps_threshold:
             with torch.no_grad():

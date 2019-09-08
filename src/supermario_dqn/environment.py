@@ -27,6 +27,7 @@ class MarioEnvironment():
         self.n_frames = n_frames
         self.actions = COMPLEX_MOVEMENT
         self._env = JoypadSpace(gym.make('SuperMarioBros-v0'), self.actions)
+        self.n_actions = self._env.action_space.n
 
     def reset(self) -> State:
         frame = self._env.reset()
