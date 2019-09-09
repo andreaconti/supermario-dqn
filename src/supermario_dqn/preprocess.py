@@ -7,7 +7,7 @@ from torchvision import transforms
 __all__ = ['preprocess']
 
 
-def preprocess(tensor):
+def preprocess(tensor, resize_h, resize_w):
     """
     Preprocess a frame deleting background and highlighting
     Mario
@@ -25,6 +25,6 @@ def preprocess(tensor):
 
     return transforms.Compose([
         transforms.ToPILImage(),
-        transforms.Resize([60, 110]),
+        transforms.Resize([resize_h, resize_w]),
         transforms.ToTensor()
     ])(state_)[0]

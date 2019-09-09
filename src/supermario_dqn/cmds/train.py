@@ -56,6 +56,6 @@ def main():
         print('{:15} {}'.format(k, v))
 
     # create environment, DQN and start training
-    env = MarioEnvironment(3, pr.preprocess)
-    model = nn.create([3, 60, 110], env.n_actions, load_state_from=args.pop('load'))
+    env = MarioEnvironment(4, lambda t: pr.preprocess(t, 30, 56))
+    model = nn.create([4, 30, 56], env.n_actions, load_state_from=args.pop('load'))
     nn.train(model, env, device=_device, **args)
