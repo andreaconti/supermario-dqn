@@ -21,11 +21,11 @@ class MarioEnvironment():
 
     def __init__(self, n_frames: int, preprocess: Callable = None):
 
-        from gym_super_mario_bros.actions import COMPLEX_MOVEMENT
+        from gym_super_mario_bros.actions import SIMPLE_MOVEMENT
 
         self._preprocess = preprocess
         self.n_frames = n_frames
-        self.actions = COMPLEX_MOVEMENT
+        self.actions = SIMPLE_MOVEMENT
         self._env = JoypadSpace(gym.make('SuperMarioBros-v0'), self.actions)
         self.n_actions = self._env.action_space.n
 
