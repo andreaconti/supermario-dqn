@@ -17,12 +17,13 @@ def main():
 
     env = MarioEnvironment(4, lambda t: preprocess(t, 30, 56))
     model = nn.create([4, 30, 56], env.n_actions, load_state_from=args['model'])
+    model.requires_grad_(False)
 
     # play loop
     done = False
     step = 0
     reward = 0
-    pr_state, showed_state = env.reset(original=True)
+    [pr_state, or_state] = env.reset(original=True)
     plt.figure(1)
     while not done:
         plt.clf()
