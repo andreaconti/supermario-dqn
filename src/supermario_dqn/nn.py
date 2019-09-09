@@ -175,7 +175,7 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
         optimizer.zero_grad()
         loss.backward()
         for param in policy_net.parameters():
-            param.grad.data.clamp_(-1, 1)  # to avoid exploding gradient problem
+            param.grad.data.clamp_(-15, 15)  # to avoid exploding gradient problem
         optimizer.step()
 
     # training loop
