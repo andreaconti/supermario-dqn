@@ -6,6 +6,7 @@ import math
 import random
 import typing
 from collections import namedtuple
+import datetime
 
 import torch
 import torch.nn.functional as F
@@ -61,7 +62,7 @@ class DQN(nn.Module):
         self._width = width
 
         # CNN
-        self.conv1 = nn.Conv2d(channels, 64, kernel_size=5, stride=2)
+        self.conv1 = nn.Conv2d(channels, 64, kernel_size=5, stride=1)
         self.bn1 = nn.BatchNorm2d(64)
         self.conv2 = nn.Conv2d(64, 32, kernel_size=5, stride=2)
         self.bn2 = nn.BatchNorm2d(32)
@@ -69,8 +70,8 @@ class DQN(nn.Module):
         self.bn3 = nn.BatchNorm2d(32)
 
         # Dense
-        convw = DQN._conv2d_size_out(DQN._conv2d_size_out(DQN._conv2d_size_out(width)))
-        convh = DQN._conv2d_size_out(DQN._conv2d_size_out(DQN._conv2d_size_out(height)))
+        convw = DQN._conv2d_size_out(DQN._conv2d_size_out(DQN._conv2d_size_out(width, stride=1)))
+        convh = DQN._conv2d_size_out(DQN._conv2d_size_out(DQN._conv2d_size_out(height, stride=1)))
         linear_input_size = convw * convh * 32
         self.fc1 = nn.Linear(linear_input_size, 512)
         self.head = nn.Linear(512, outputs)
@@ -200,18 +201,18 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
                 optimize_model()
 
         if verbose > 0:
-            print(f'end episode ({i_episode}/{num_episodes}): {episode_reward} reward')
+            print(f'[{datetime.datetime.now().strftime("%d:%m:%Y %H:%M")}] end episode ({i_episode}/{num_episodes}): {episode_reward} reward')  # noqa
 
         # Update the target network, copying all weights and biases in DQN
         if i_episode % target_update == 0:
             if verbose > 0:
-                print('updating target network')
+                print('[{datetime.datetime.now().strftime("%d:%m:%Y %H:%M")}] updating target network')
             target_net.load_state_dict(policy_net.state_dict())
 
         # Save on file
         if i_episode % save_interval == 0:
             if verbose > 0:
-                print(f'saving model ({steps_done} steps done)')
+                print(f'[{datetime.datetime.now().strftime("%d:%m:%Y %H:%M")}] saving model ({steps_done} steps done)')
             torch.save(policy_net.state_dict(), save_path)
 
 

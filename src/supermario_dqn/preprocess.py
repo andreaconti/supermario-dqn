@@ -17,7 +17,7 @@ def preprocess(tensor, resize_h, resize_w):
     mario_other = 172  # , 140, 0]
     background = 104
 
-    state_ = tensor[70:208, :, 0]  # crop and red signal
+    state_ = tensor[70:210, :, 0]  # crop and red signal
     state_[state_ == mario_dress] = 255
     state_[state_ == mario_skin] = 255
     state_[state_ == mario_other] = 255
