@@ -29,18 +29,29 @@ class MarioEnvironment():
         self._env = JoypadSpace(gym.make('SuperMarioBros-v0'), self.actions)
         self.n_actions = self._env.action_space.n
 
-    def reset(self) -> State:
+    def reset(self, original=False):
         frame = self._env.reset()
         if self._preprocess is not None:
-            frame = self._preprocess(frame)
+            frame_ = self._preprocess(frame)
+        else:
+            frame_ = frame
 
-        self.frames = deque([frame]*self.n_frames, self.n_frames)
-        return torch.stack(tuple(self.frames))
+        self.frames = deque([frame_]*self.n_frames, self.n_frames)
 
-    def step(self, action: int):
+        if not original:
+            return torch.stack(tuple(self.frames))
+        else:
+            return torch.stack(tuple(self.frames)), frame
+
+    def step(self, action: int, original=False):
         frame, reward, done, info = self._env.step(action)
         if self._preprocess is not None:
-            frame = self._preprocess(frame)
-        self.frames.appendleft(frame)
+            frame_ = self._preprocess(frame)
+        else:
+            frame_ = frame
+        self.frames.appendleft(frame_)
 
-        return torch.stack(tuple(self.frames)), reward, done, info
+        if not original:
+            return torch.stack(tuple(self.frames)), reward, done, info
+        else:
+            return [torch.stack(tuple(self.frames)), frame], reward, done, info
