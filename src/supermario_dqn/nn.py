@@ -12,7 +12,7 @@ import torch.nn.functional as F
 from torch import nn, optim
 
 from supermario_dqn.environment import MarioEnvironment
-from supermario_dqn.preprocess import preprocess
+
 
 __all__ = ['create', 'train']
 
@@ -108,10 +108,10 @@ def create(size: typing.List[int], outputs: int,
     return dqn
 
 
-def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, gamma=0.999, eps_start=0.9,
-          eps_end=0.05, eps_decay=200, target_update=10, save_path='model.pt',
-          save_interval=10, memory_size=10000, num_episodes=50, device='cpu',
-          verbose=1):
+def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=32,
+          gamma=0.999, eps_start=0.9, eps_end=0.05, eps_decay=200, target_update=10,
+          save_path='model.pt', save_interval=10, memory_size=10000, num_episodes=50,
+          device='cpu', verbose=1):
     """
     Handles training of network
     """
@@ -160,11 +160,11 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, gamma=0.999, e
         action_batch = torch.cat(batch.action)
         reward_batch = torch.cat(batch.reward)
 
-        state_action_values = policy_net(state_batch)
+        state_action_values = policy_net(state_batch.to(device))
         state_action_values = state_action_values.gather(1, action_batch)
 
         next_state_values = torch.zeros(batch_size, device=device)
-        next_state_values[non_final_mask] = target_net(non_final_next_states).max(1)[0].detach()
+        next_state_values[non_final_mask] = target_net(non_final_next_states.to(device)).max(1)[0].detach()
         expected_state_action_values = (next_state_values * gamma) + reward_batch
 
         loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
@@ -175,7 +175,7 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, gamma=0.999, e
         optimizer.zero_grad()
         loss.backward()
         for param in policy_net.parameters():
-            param.grad.data.clamp_(-1, 1)
+            param.grad.data.clamp_(-1, 1)  # to avoid exploding gradient problem
         optimizer.step()
 
     # training loop
@@ -186,30 +186,31 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, gamma=0.999, e
         while not done:
             action = select_action(curr_state.unsqueeze(0).to(device))
             next_state, reward, done, _ = env.step(action.item())
-            reward = torch.tensor([reward], device=device, dtype=torch.float32)
             episode_reward += reward
+            reward = torch.tensor([reward], device=device, dtype=torch.float32)
 
             if not done:
-                memory.push(_Transition(curr_state.to(device), action, next_state.to(device), reward))
+                memory.push(_Transition(curr_state, action, next_state.to(device), reward))
                 curr_state = next_state
             else:
-                memory.push(_Transition(curr_state.to(device), action, None, reward))
+                memory.push(_Transition(curr_state, action, None, reward))
 
             # Perform one step of the optimization (on the target network)
-            optimize_model()
+            if steps_done % fit_interval == 0:
+                optimize_model()
 
-        if verbose > 1:
+        if verbose > 0:
             print(f'end episode ({i_episode}/{num_episodes}): {episode_reward} reward')
 
         # Update the target network, copying all weights and biases in DQN
         if i_episode % target_update == 0:
-            if verbose > 1:
+            if verbose > 0:
                 print('updating target network')
             target_net.load_state_dict(policy_net.state_dict())
 
         # Save on file
         if i_episode % save_interval == 0:
-            if verbose > 1:
+            if verbose > 0:
                 print(f'saving model ({steps_done} steps done)')
             torch.save(policy_net.state_dict(), save_path)
 

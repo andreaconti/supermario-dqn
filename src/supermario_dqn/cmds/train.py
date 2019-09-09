@@ -26,6 +26,8 @@ def main():
     parser = argparse.ArgumentParser(description='Handle training')
     parser.add_argument('--batch_size', type=int, default=128,
                         help='size of each batch used for training')
+    parser.add_argument('--fit_interval', type=int, default=32,
+                        help='fit every `fit_interval` examples available')
     parser.add_argument('--gamma', type=float, default=0.999,
                         help='discount rate used for Q-values learning')
     parser.add_argument('--eps_start', type=float, default=0.9,
@@ -48,12 +50,12 @@ def main():
                         help='load a saved state_dict')
 
     args = vars(parser.parse_args())
-    load = args.pop('load')
-    if load is not None:
-        print(f'Loading from {load}')
-    print(f'Saving model in {args["save_path"]}')
+
+    print('training parameters:')
+    for k, v in args.items():
+        print('{:15} {}'.format(k, v))
 
     # create environment, DQN and start training
     env = MarioEnvironment(3, pr.preprocess)
-    model = nn.create([3, 60, 110], env.n_actions, load_state_from=load)
+    model = nn.create([3, 60, 110], env.n_actions, load_state_from=args.pop('load'))
     nn.train(model, env, device=_device, **args)
