@@ -26,7 +26,7 @@ def main():
     parser = argparse.ArgumentParser(description='Handle training')
     parser.add_argument('--batch_size', type=int, default=128,
                         help='size of each batch used for training')
-    parser.add_argument('--fit_interval', type=int, default=32,
+    parser.add_argument('--fit_interval', type=int, default=16,
                         help='fit every `fit_interval` examples available')
     parser.add_argument('--gamma', type=float, default=0.999,
                         help='discount rate used for Q-values learning')
@@ -48,12 +48,16 @@ def main():
                         help='verbosity of output')
     parser.add_argument('--load', type=str, default=None,
                         help='load a saved state_dict')
+    parser.add_argument('--log_file_path', type=str, default='log.txt',
+                        help='file path where write logs')
 
     args = vars(parser.parse_args())
 
     print('training parameters:')
-    for k, v in args.items():
-        print('{:15} {}'.format(k, v))
+    with open('paramters_log.txt', 'w') as params_log:
+        for k, v in args.items():
+            print('{:15} {}'.format(k, v))
+            params_log.write('{:15} {}\n'.format(k, v))
 
     # create environment, DQN and start training
     env = MarioEnvironment(4, lambda t: pr.preprocess(t, 30, 56))
