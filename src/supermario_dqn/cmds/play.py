@@ -10,14 +10,17 @@ import matplotlib.pyplot as plt
 import argparse
 
 
-def main():
-    parser = argparse.ArgumentParser('play a game')
-    parser.add_argument('model', type=str, help='neural network model')
-    args = vars(parser.parse_args())
+def main(model=None):
 
     env = MarioEnvironment(4, lambda t: preprocess(t, 30, 56))
-    model = nn.create([4, 30, 56], env.n_actions, load_state_from=args['model'])
-    model.requires_grad_(False)
+
+    if model is None:
+        parser = argparse.ArgumentParser('play a game')
+        parser.add_argument('model', type=str, help='neural network model')
+        args = vars(parser.parse_args())
+
+        model = nn.create([4, 30, 56], env.n_actions, load_state_from=args['model'])
+        model.requires_grad_(False)
 
     # play loop
     done = False
