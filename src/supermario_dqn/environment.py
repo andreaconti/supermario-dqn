@@ -24,8 +24,8 @@ class MarioEnvironment():
         self._preprocess = preprocess
         self.n_frames = n_frames
         self.actions = [['right'], ['right', 'A', 'B'], ['right', 'A'], ['left']]
-        self._env = JoypadSpace(gym.make('SuperMarioBros-v0'), self.actions)
-        self.n_actions = self._env.action_space.n
+        self._env = JoypadSpace(gym.make('SuperMarioBros-v0'), self.actions + [['NOOP']])
+        self.n_actions = len(self.actions)
 
     def reset(self, original=False):
         frame = self._env.reset()
@@ -33,6 +33,7 @@ class MarioEnvironment():
 
         self.frames = deque([frame_]*self.n_frames, self.n_frames)
         self._last_x_pos = 0
+        self._last_y_pos = 0
 
         if not original:
             return torch.stack(tuple(self.frames))
@@ -42,15 +43,25 @@ class MarioEnvironment():
     def step(self, action: int, original: bool = False, apply_times: int = 3):
 
         # apply
-        reward: int = 0
+        noop_action: int = self.n_actions
         last_x_pos: int = 0
+        last_y_pos: int = 0
+        reward = 0
+
         for i in range(apply_times):
+
             frame, reward_, done, info = self._env.step(action)
             last_x_pos = info['x_pos']
+            last_y_pos = info['y_pos']
             reward += reward_
 
             if done:
                 break
+
+        if not done and self._last_y_pos >= last_y_pos:
+            frame, reward_, done, info = self._env.step(noop_action)
+            reward += reward_
+        self._last_y_pos = last_y_pos
 
         # preprocess reward
         if 'right' in self.actions[action] and 'A' not in self.actions[action] and last_x_pos == self._last_x_pos:

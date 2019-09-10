@@ -62,17 +62,19 @@ class DQN(nn.Module):
         self._width = width
 
         # CNN
-        self.conv1 = nn.Conv2d(channels, 64, kernel_size=5, stride=1)
-        self.bn1 = nn.BatchNorm2d(64)
-        self.conv2 = nn.Conv2d(64, 32, kernel_size=5, stride=2)
-        self.bn2 = nn.BatchNorm2d(32)
-        self.conv3 = nn.Conv2d(32, 32, kernel_size=5, stride=2)
-        self.bn3 = nn.BatchNorm2d(32)
+        self.conv1 = nn.Conv2d(channels, 32, kernel_size=6, stride=3)
+        self.bn1 = nn.BatchNorm2d(32)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
+        self.bn2 = nn.BatchNorm2d(64)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        self.bn3 = nn.BatchNorm2d(64)
 
         # Dense
-        convw = DQN._conv2d_size_out(DQN._conv2d_size_out(DQN._conv2d_size_out(width, stride=1)))
-        convh = DQN._conv2d_size_out(DQN._conv2d_size_out(DQN._conv2d_size_out(height, stride=1)))
-        linear_input_size = convw * convh * 32
+        convw = DQN._conv2d_size_out(DQN._conv2d_size_out(DQN._conv2d_size_out(width, kernel_size=6, stride=3),
+                                     kernel_size=4, stride=2), kernel_size=3, stride=1)
+        convh = DQN._conv2d_size_out(DQN._conv2d_size_out(DQN._conv2d_size_out(height, kernel_size=6, stride=3),
+                                     kernel_size=4, stride=2), kernel_size=3, stride=1)
+        linear_input_size = convw * convh * 64
         self.fc1 = nn.Linear(linear_input_size, 512)
         self.head = nn.Linear(512, outputs)
 
@@ -80,11 +82,11 @@ class DQN(nn.Module):
         return (size - (kernel_size - 1) - 1) // stride + 1
 
     def forward(self, x):
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
-        x = F.relu(self.bn3(self.conv3(x)))
-        x = F.relu(self.fc1(x.view(x.size(0), -1)))
-        x = self.head(x)
+        x = F.leaky_relu(self.bn1(self.conv1(x)))
+        x = F.leaky_relu(self.bn2(self.conv2(x)))
+        x = F.leaky_relu(self.bn3(self.conv3(x)))
+        x = F.leaky_relu(self.fc1(x.view(x.size(0), -1)))
+        x = F.softsign(self.head(x)) * 15.
         return x
 
 
@@ -110,8 +112,8 @@ def create(size: typing.List[int], outputs: int,
 
 
 def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=32,
-          gamma=0.9, eps_start=0.9, eps_end=0.05, eps_decay=200, target_update=10,
-          save_path='model.pt', save_interval=10, memory_size=10000, num_episodes=50,
+          gamma=0.98, eps_start=0.9, eps_end=0.05, eps_decay=200, target_update=15,
+          save_path='model.pt', save_interval=10, memory_size=200000, num_episodes=50,
           device='cpu', log_file_dir=None, verbose=1):
     """
     Handles training of network
@@ -129,11 +131,16 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
     target_net.to(device)
     target_net.eval()
     memory = _ReplayMemory(memory_size)
-    optimizer = optim.RMSprop(policy_net.parameters())
+    optimizer = optim.Adam(policy_net.parameters())
+
+    if verbose > 0:
+        if log_file_dir is not None:
+            episode_log_file = open(log_file_dir + '/episodes.csv', 'w')
+        else:
+            episode_log_file = open('episodes.csv', 'w')
+        episode_log_file.write('episode,reward,steps,choosen_moves,random_moves\n')
 
     if log_file_dir is not None:
-        episode_log_file = open(log_file_dir + '/episodes.csv', 'w')
-        episode_log_file.write('episode,reward,steps,choosen_moves,random_moves\n')
         fitting_log_file = open(log_file_dir + '/fitting_log.csv\n', 'w')
         fitting_log_file.write('episode,step,mean_error\n')
         qvalues_log_file = open(log_file_dir + '/qvalues_log.csv', 'w')
@@ -189,8 +196,6 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
 
         optimizer.zero_grad()
         loss.backward()
-        for param in policy_net.parameters():
-            param.grad.data.clamp_(-15, 15)  # to avoid exploding gradient problem
         optimizer.step()
 
         if log_file_dir is not None:
@@ -214,7 +219,7 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
                 reward = torch.tensor([reward], device=device, dtype=torch.float32)
 
                 if not done:
-                    memory.push(_Transition(curr_state, action, next_state.to(device), reward))
+                    memory.push(_Transition(curr_state, action, next_state, reward))
                     curr_state = next_state
                 else:
                     memory.push(_Transition(curr_state, action, None, reward))
@@ -230,13 +235,13 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
                                            + ',{},{}\n'.format(action.item(), reward.item()))
 
             # log on episode.csv
-            if log_file_dir is not None:
+            if verbose > 0:
                 episode_log_file.write('{},{},{},{},{}\n'
                                        .format(i_episode+1, episode_reward, steps_done, choosen_moves, random_moves))
 
             # print
             if verbose > 0:
-                print(f'[{datetime.datetime.now().strftime("%d:%m:%Y %H:%M")}] end episode ({i_episode+1}/{num_episodes}): {episode_reward} reward')  # noqa
+                print(f'[{datetime.datetime.now().strftime("%d:%m:%Y %H:%M")}] end episode ({i_episode+1}/{num_episodes} | {steps_done} steps): {episode_reward} reward')  # noqa
 
             # Update the target network, copying all weights and biases in DQN
             if i_episode % target_update == 0:
@@ -247,16 +252,18 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
             # Save on file
             if i_episode % save_interval == 0:
                 if verbose > 0:
-                    print(f'[{datetime.datetime.now().strftime("%d:%m:%Y %H:%M")}] saving model ({total_step} steps done)')  # noqa
+                    print(f'[{datetime.datetime.now().strftime("%d:%m:%Y %H:%M")}] saving model ({total_step} total steps done)')  # noqa
                 torch.save(policy_net.state_dict(), save_path)
 
     finally:
 
         # close logs
+        if verbose > 0:
+            episode_log_file.close()
+
         if log_file_dir is not None:
             qvalues_log_file.close()
             fitting_log_file.close()
-            episode_log_file.close()
 
         # save network
         torch.save(policy_net.state_dict(), save_path)
