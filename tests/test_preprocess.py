@@ -9,8 +9,8 @@ from supermario_dqn.preprocess import preprocess
 
 def test_preprocess():
     env = gym.make('SuperMarioBros-v0')
-    result = preprocess(env.reset())
+    result = preprocess(env.reset(), 35, 55)
 
     assert(type(result) is torch.Tensor)
-    assert(result.size(0) == 60)
-    assert(result.size(1) == 110)
+    assert(result.size(0) == 35)
+    assert(result.size(1) == 55)
