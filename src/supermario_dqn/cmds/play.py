@@ -4,7 +4,6 @@ Play a game loading a model.pt file
 
 from supermario_dqn.environment import MarioEnvironment
 from supermario_dqn.preprocess import preprocess
-from gym_super_mario_bros.actions import SIMPLE_MOVEMENT
 import supermario_dqn.nn as nn
 import matplotlib.pyplot as plt
 import argparse
@@ -37,7 +36,7 @@ def main(model=None):
         reward += r
 
         plt.imshow(or_state)
-        plt.title(f'action {SIMPLE_MOVEMENT[action]}, reward {reward}')
+        plt.title(f'action {env.actions[action]}, reward {reward}')
         plt.pause(0.05)
 
     print(f'final reward: {reward}')

@@ -25,25 +25,25 @@ def main():
 
     # parse arguments
     parser = argparse.ArgumentParser(description='Handle training')
-    parser.add_argument('--batch_size', type=int, default=128,
+    parser.add_argument('--batch_size', type=int, default=256,
                         help='size of each batch used for training')
-    parser.add_argument('--fit_interval', type=int, default=16,
+    parser.add_argument('--fit_interval', type=int, default=4,
                         help='fit every `fit_interval` examples available')
-    parser.add_argument('--gamma', type=float, default=0.9,
+    parser.add_argument('--gamma', type=float, default=0.98,
                         help='discount rate used for Q-values learning')
     parser.add_argument('--eps_start', type=float, default=0.9,
                         help='start probability to choose a random action')
     parser.add_argument('--eps_end', type=float, default=0.25,
                         help='end probability to choose a random action')
-    parser.add_argument('--target_update', type=int, default=10,
+    parser.add_argument('--target_update', type=int, default=15,
                         help='number of episodes between each target dqn update')
-    parser.add_argument('--save_interval', type=int, default=10,
+    parser.add_argument('--save_interval', type=int, default=30,
                         help='number of episodes between each network checkpoint')
     parser.add_argument('--save_path', type=str, default='model.pt',
                         help='where save trained model')
-    parser.add_argument('--memory_size', type=int, default=10000,
+    parser.add_argument('--memory_size', type=int, default=100000,
                         help='size of replay memory')
-    parser.add_argument('--num_episodes', type=int, default=2000,
+    parser.add_argument('--num_episodes', type=int, default=4000,
                         help='number of games to be played before end')
     parser.add_argument('--verbose', type=int, default=1,
                         help='verbosity of output')
