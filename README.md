@@ -2,7 +2,7 @@ supermario-dqn
 ==============
 
 Deep Reinforcement Learning Agent for Super Mario Bros using OpenAI gym
-![gym-super-mario-bros](https://github.com/Kautenja/gym-super-mario-bros) environment
+[gym-super-mario-bros](https://github.com/Kautenja/gym-super-mario-bros) environment
 
 
 ## Usage
