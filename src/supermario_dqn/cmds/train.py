@@ -3,6 +3,7 @@ Handles supermario training
 """
 
 import torch
+import os
 from supermario_dqn.environment import MarioEnvironment
 import supermario_dqn.nn as nn
 import supermario_dqn.preprocess as pr
@@ -62,6 +63,9 @@ def main():
     for k, v in args.items():
         print('{:15} {}'.format(k, v))
     if args['log_file_dir'] is not None:
+        with open(os.path.join(args['log_file_dir'], 'parameters.log'), 'w') as params_log:
+            params_log.write('{:15} {}\n'.format(k, v))
+    else:
         with open('parameters.log', 'w') as params_log:
             params_log.write('{:15} {}\n'.format(k, v))
 
