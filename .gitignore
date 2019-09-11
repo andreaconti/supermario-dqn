@@ -47,4 +47,3 @@ MANIFEST
 
 # Per-project virtualenvs
 .venv*/
-model.pt
