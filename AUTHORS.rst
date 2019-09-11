@@ -2,4 +2,4 @@
 Contributors
 ============
 
-* Andrea Conti <contiandrea96@gmail.com>
+* Andrea Conti <andrea.conti@tutanota.com>
