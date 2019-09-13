@@ -54,6 +54,8 @@ def main():
                         help='file path where write logs')
     parser.add_argument('--finally_show', action='store_true',
                         help='finally show a play')
+    parser.add_argument('--random', action='store_true',
+                        help='choose randomly different worlds and stages')
 
     args = vars(parser.parse_args())
 
@@ -70,7 +72,7 @@ def main():
             params_log.write('{:15} {}\n'.format(k, v))
 
     # create environment, DQN and start training
-    env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56))
+    env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56), random=args.pop('random'))
     model = nn.create([4, 30, 56], env.n_actions, load_state_from=args.pop('load'), for_train=True)
     nn.train(model, env, device=_device, **args)
 
