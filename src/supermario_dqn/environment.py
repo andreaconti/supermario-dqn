@@ -8,6 +8,7 @@ from typing import Callable
 import gym_super_mario_bros as gym
 import torch
 from nes_py.wrappers import JoypadSpace
+import random as r
 
 __all__ = ['State', 'MarioEnvironment']
 
@@ -22,27 +23,45 @@ class MarioEnvironment():
     def __init__(self, n_frames: int, preprocess: Callable, random=False, world_stage: (int, int) = None):
 
         # compute world
-        world = 'SuperMarioBros-v0'
-        self._stage = None
-        if world_stage is not None:
+        world_name = 'SuperMarioBros-v0'
+        self._world = 1
+        self._stage = 1
+        self._selected = None
+        if world_stage is not None and not random:
             assert(world_stage[0] in range(1, 9))
             assert(world_stage[1] in range(1, 5))
-            self._stage = world_stage[1]
-            world = 'SuperMarioBros-{}-{}-v0'.format(world_stage[0], world_stage[1])
+            self._world, self._stage = world_stage
+            self._selected = world_stage
+            world_name = 'SuperMarioBros-{}-{}-v0'.format(self._world, self._stage)
 
+        self._random = random
         if random:
-            world = 'SuperMarioBrosRandomStages-v0'
-            self._stage = None
+            self._world = r.sample(range(1, 9), 1)[0]
+            self._stage = r.sample(range(1, 5), 1)[0]
+            world_name = f'SuperMarioBros-{self._world}-{self._stage}-v0'
 
         self._preprocess = preprocess
         self.n_frames = n_frames
         self.actions = [['right'], ['right', 'A', 'B'], ['right', 'A'], ['left']]
-        self._env = JoypadSpace(gym.make(world), self.actions + [['NOOP']])
+        self._env = JoypadSpace(gym.make(world_name), self.actions + [['NOOP']])
         self.n_actions = len(self.actions)
 
     def reset(self, original=False):
-        frame = self._env.reset()
-        frame_ = self._preprocess(frame)
+
+        if not self._random:
+            frame = self._env.reset()
+            if self._selected is not None:
+                self._world, self._stage = self._selected
+            else:
+                self._world = 1
+                self._stage = 1
+        else:
+            self._world = r.sample(range(1, 9), 1)[0]
+            self._stage = r.sample(range(1, 5), 1)[0]
+            self._env = JoypadSpace(gym.make('SuperMarioBros-{}-{}-v0'.format(self._world, self._stage)), self.actions + [['NOOP']])  # noqa
+            frame = self._env.reset()
+
+        frame_ = self._preprocess(self._world, self._stage, frame)
 
         self.frames = deque([frame_]*self.n_frames, self.n_frames)
         self._last_x_pos = 0
@@ -68,12 +87,11 @@ class MarioEnvironment():
             last_x_pos = info['x_pos']
             last_y_pos = info['y_pos']
             reward += reward_
+            self._world = info['world']
+            self._stage = info['stage']
 
             if original:
                 original_frames.append(frame)
-
-            if self._stage is not None and self._stage < info['stage']:
-                done = True
 
             if done:
                 break
@@ -83,6 +101,9 @@ class MarioEnvironment():
             frame, reward_, done, info = self._env.step(noop_action)
             original_frames.append(frame)
             reward += reward_
+            self._world = info['world']
+            self._stage = info['stage']
+
         self._last_y_pos = last_y_pos
 
         # preprocess reward
@@ -92,7 +113,7 @@ class MarioEnvironment():
 
         # preprocess image
         if self._preprocess is not None:
-            frame_ = self._preprocess(frame)
+            frame_ = self._preprocess(self._world, self._stage, frame)
         else:
             frame_ = frame
         self.frames.appendleft(frame_)

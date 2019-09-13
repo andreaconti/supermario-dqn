@@ -70,7 +70,7 @@ def main():
             params_log.write('{:15} {}\n'.format(k, v))
 
     # create environment, DQN and start training
-    env = MarioEnvironment(4, lambda t: pr.preprocess(t, 30, 56))
+    env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56))
     model = nn.create([4, 30, 56], env.n_actions, load_state_from=args.pop('load'), for_train=True)
     nn.train(model, env, device=_device, **args)
 

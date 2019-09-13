@@ -18,11 +18,11 @@ def main(model=None, world_stage=None):
                             help='select a specific world and stage, world in [1..8], stage in [1..4]')
         args = vars(parser.parse_args())
 
-        env = MarioEnvironment(4, lambda t: preprocess(t, 30, 56), world_stage=args['world_stage'])
+        env = MarioEnvironment(4, lambda w, s, t: preprocess(w, s, t, 30, 56), world_stage=args['world_stage'])
         model = nn.create([4, 30, 56], env.n_actions, load_state_from=args['model'])
         model.requires_grad_(False)
     else:
-        env = MarioEnvironment(4, lambda t: preprocess(t, 30, 56), world_stage=world_stage)
+        env = MarioEnvironment(4, lambda w, s, t: preprocess(w, s, t, 30, 56), world_stage=world_stage)
 
     # play loop
     done = False
