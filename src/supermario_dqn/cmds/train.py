@@ -19,6 +19,11 @@ else:
     print('[Warning] using CPU for training')
 
 
+def _create_and_train(proc_index, model, args):
+    env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56), random=args.pop('random'), render=args.pop('render'))  # noqa
+    nn.train(model, env, device=_device, **args)
+
+
 def main():
     """
     Starts training, handles many parameters for training and also in order to
@@ -66,7 +71,6 @@ def main():
 
     # log params
     show = args.pop('finally_show')
-    render = args.pop('render')
     workers = args.pop('workers')
     print('training parameters:')
     for k, v in args.items():
@@ -81,24 +85,10 @@ def main():
     # create environment, DQN and start training
     model = nn.create([4, 30, 56], MarioEnvironment.n_actions, load_state_from=args.pop('load'), for_train=True)
     if workers == 1:
-        env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56), random=args.pop('random'), render=render)  # noqa
-        nn.train(model, env, device=_device, **args)
+        _create_and_train(0, model, args)
     elif workers > 1:
         model.share_memory()
-
-        def create_and_train():
-            env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56), random=args.pop('random'), render=render)  # noqa
-            nn.train(model, env, device=_device, **args)
-
-        processes = []
-        for i in range(workers):
-            p = mp.Process(target=create_and_train)
-            p.start()
-            processes.append(p)
-
-        for p in processes:
-            p.join()
-
+        mp.spawn(_create_and_train, args=(model, args), nprocs=workers, join=True)
     else:
         print('[Error] workers >= 1')
 
