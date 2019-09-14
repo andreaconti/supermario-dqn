@@ -5,6 +5,7 @@ Module containing utilities for training
 import math
 import random
 import typing
+import os
 from collections import namedtuple
 import datetime
 
@@ -141,9 +142,9 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
         episode_log_file.write('episode,reward,steps,choosen_moves,random_moves\n')
 
     if log_file_dir is not None:
-        fitting_log_file = open(log_file_dir + '/fitting_log.csv\n', 'w')
+        fitting_log_file = open(os.path.join(log_file_dir, 'fitting_log.csv'), 'w')
         fitting_log_file.write('episode,step,mean_error\n')
-        qvalues_log_file = open(log_file_dir + '/qvalues_log.csv', 'w')
+        qvalues_log_file = open(os.path.join(log_file_dir, 'qvalues_log.csv'), 'w')
         qvalues_log_file.write('episode,step,' + ','.join(["{}{}".format(a, b) for a, b in zip(['action'] * n_actions, range(n_actions))]) + ',choosen,reward') # noqa
 
     # for logs
@@ -241,7 +242,7 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
 
             # print
             if verbose > 0:
-                print(f'[{datetime.datetime.now().strftime("%d:%m:%Y %H:%M")}] end episode ({i_episode+1}/{num_episodes} | {steps_done} steps): {episode_reward} reward')  # noqa
+                print(f'[{datetime.datetime.now().strftime("%d:%m:%Y %H:%M")}] end episode ({i_episode+1}/{num_episodes}, world: {env.curr_world} stage: {env.curr_stage}, {steps_done} steps): {episode_reward} reward')  # noqa
 
             # Update the target network, copying all weights and biases in DQN
             if i_episode % target_update == 0:

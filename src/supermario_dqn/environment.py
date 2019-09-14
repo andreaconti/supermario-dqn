@@ -46,6 +46,14 @@ class MarioEnvironment():
         self._env = JoypadSpace(gym.make(world_name), self.actions + [['NOOP']])
         self.n_actions = len(self.actions)
 
+    @property
+    def curr_world(self):
+        return self._world
+
+    @property
+    def curr_stage(self):
+        return self._stage
+
     def reset(self, original=False):
 
         if not self._random:
