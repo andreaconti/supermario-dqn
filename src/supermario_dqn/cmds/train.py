@@ -22,7 +22,10 @@ else:
 def _create_and_train(proc_index, model, args):
     if proc_index is not None:
         args['log_postfix'] = str(proc_index)
-    env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56), random=args.pop('random'), render=args.pop('render'))  # noqa
+    env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56),
+                           random=args.pop('random'),
+                           render=args.pop('render'),
+                           world_stage=args.pop('world_stage'))
     nn.train(model, env, device=_device, **args)
 
 
@@ -68,8 +71,13 @@ def main():
                         help='rendering of frames, only for debug')
     parser.add_argument('--workers', type=int, default=1,
                         help='multiprocessing enable')
+    parser.add_argument('--world_stage', type=int, nargs=2, default=None,
+                        help='select specific world and stage')
 
     args = vars(parser.parse_args())
+
+    if args['world_stage'] is not None:
+        args['random'] = False
 
     # log params
     show = args.pop('finally_show')
@@ -90,6 +98,10 @@ def main():
         _create_and_train(None, model, args)
     elif workers > 1:
         model.share_memory()
+
+        args['num_episodes'] = args['num_episodes'] // workers
+        args['memory_size'] = args['memory_size'] // workers
+
         mp.spawn(_create_and_train, args=(model, args), nprocs=workers, join=True)
     else:
         print('[Error] workers >= 1')
