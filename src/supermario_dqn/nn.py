@@ -6,7 +6,7 @@ import math
 import random
 import typing
 import os
-from collections import namedtuple
+from collections import namedtuple, deque
 import datetime
 
 import torch
@@ -28,18 +28,13 @@ _Transition = namedtuple('_Transition',
 class _ReplayMemory(object):
 
     def __init__(self, capacity: int):
-        self.capacity = capacity
-        self.memory = []
-        self.position = 0
+        self.memory = deque([], maxlen=capacity)
 
     def push(self, transition):
         """Saves a transition."""
-        if len(self.memory) < self.capacity:
-            self.memory.append(None)
-        self.memory[self.position] = transition
-        self.position = (self.position + 1) % self.capacity
+        self.memory.append(transition)
 
-    def sample(self, batch_size):
+    def sample(self, batch_size: int):
         return random.sample(self.memory, batch_size)
 
     def __len__(self):
