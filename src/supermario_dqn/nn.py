@@ -103,7 +103,10 @@ def create(size: typing.List[int], outputs: int,
     dqn = DQN(size[0], size[1], size[2], outputs)
 
     if load_state_from is not None:
-        dqn.load_state_dict(torch.load(load_state_from))
+        if torch.cuda.is_available():
+            dqn.load_state_dict(torch.load(load_state_from))
+        else:
+            dqn.load_state_dict(torch.load(load_state_from, map_location=torch.device('cpu')))
 
     if not for_train:
         dqn.eval()
