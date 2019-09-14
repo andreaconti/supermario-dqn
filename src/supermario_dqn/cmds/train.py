@@ -90,12 +90,15 @@ def main():
             env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56), random=args.pop('random'), render=render)  # noqa
             nn.train(model, env, device=_device, **args)
 
+        processes = []
         for i in range(workers):
             p = mp.Process(target=create_and_train)
             p.start()
+            processes.append(p)
 
-        for i in range(workers):
+        for p in processes:
             p.join()
+
     else:
         print('[Error] workers >= 1')
 
