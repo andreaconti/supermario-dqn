@@ -115,7 +115,7 @@ def create(size: typing.List[int], outputs: int,
 def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=32,
           gamma=0.98, eps_start=0.9, eps_end=0.05, eps_decay=200, target_update=15,
           save_path='model.pt', save_interval=10, memory_size=200000, num_episodes=50,
-          device='cpu', log_file_dir=None, verbose=1):
+          device='cpu', log_file_dir=None, verbose=1, log_postfix=''):
     """
     Handles training of network
     """
@@ -136,15 +136,15 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
 
     if verbose > 0:
         if log_file_dir is not None:
-            episode_log_file = open(log_file_dir + '/episodes.csv', 'w')
+            episode_log_file = open(os.path.join(log_file_dir, 'episodes' + log_postfix, '.csv'), 'w')
         else:
-            episode_log_file = open('episodes.csv', 'w')
+            episode_log_file = open(os.path.join('episodes' + log_postfix + '.csv'), 'w')
         episode_log_file.write('episode,reward,steps,choosen_moves,random_moves\n')
 
     if log_file_dir is not None:
-        fitting_log_file = open(os.path.join(log_file_dir, 'fitting_log.csv'), 'w')
+        fitting_log_file = open(os.path.join(log_file_dir, 'fitting_log' + log_postfix + '.csv'), 'w')
         fitting_log_file.write('episode,step,mean_error\n')
-        qvalues_log_file = open(os.path.join(log_file_dir, 'qvalues_log.csv'), 'w')
+        qvalues_log_file = open(os.path.join(log_file_dir, 'qvalues_log', log_postfix + '.csv'), 'w')
         qvalues_log_file.write('episode,step,' + ','.join(["{}{}".format(a, b) for a, b in zip(['action'] * n_actions, range(n_actions))]) + ',choosen,reward') # noqa
 
     # for logs

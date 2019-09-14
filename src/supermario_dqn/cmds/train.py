@@ -20,6 +20,8 @@ else:
 
 
 def _create_and_train(proc_index, model, args):
+    if proc_index is not None:
+        args['log_postfix'] = str(proc_index)
     env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56), random=args.pop('random'), render=args.pop('render'))  # noqa
     nn.train(model, env, device=_device, **args)
 
@@ -85,7 +87,7 @@ def main():
     # create environment, DQN and start training
     model = nn.create([4, 30, 56], MarioEnvironment.n_actions, load_state_from=args.pop('load'), for_train=True)
     if workers == 1:
-        _create_and_train(0, model, args)
+        _create_and_train(None, model, args)
     elif workers > 1:
         model.share_memory()
         mp.spawn(_create_and_train, args=(model, args), nprocs=workers, join=True)
