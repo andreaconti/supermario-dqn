@@ -3,6 +3,7 @@ Handles supermario training
 """
 
 import torch
+import torch.multiprocessing as mp
 import os
 from supermario_dqn.environment import MarioEnvironment
 import supermario_dqn.nn as nn
@@ -58,12 +59,15 @@ def main():
                         help='choose randomly different worlds and stages')
     parser.add_argument('--render', action='store_true',
                         help='rendering of frames, only for debug')
+    parser.add_argument('--workers', type=int, default=1,
+                        help='multiprocessing enable')
 
     args = vars(parser.parse_args())
 
     # log params
     show = args.pop('finally_show')
     render = args.pop('render')
+    workers = args.pop('workers')
     print('training parameters:')
     for k, v in args.items():
         print('{:15} {}'.format(k, v))
@@ -75,9 +79,27 @@ def main():
             params_log.write('{:15} {}\n'.format(k, v))
 
     # create environment, DQN and start training
-    env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56), random=args.pop('random'), render=render)
-    model = nn.create([4, 30, 56], env.n_actions, load_state_from=args.pop('load'), for_train=True)
-    nn.train(model, env, device=_device, **args)
+    model = nn.create([4, 30, 56], MarioEnvironment.n_actions, load_state_from=args.pop('load'), for_train=True)
+    if workers == 1:
+        env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56), random=args.pop('random'), render=render)  # noqa
+        nn.train(model, env, device=_device, **args)
+    elif workers > 1:
+        model.share_memory()
+
+        def create_and_train():
+            env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56), random=args.pop('random'), render=render)  # noqa
+            nn.train(model, env, device=_device, **args)
+
+        for i in range(workers):
+            p = mp.Process(target=create_and_train)
+            p.start()
+
+        for i in range(workers):
+            p.join()
+    else:
+        print('[Error] workers >= 1')
+
+    print('end of training.')
 
     # show
     if show:

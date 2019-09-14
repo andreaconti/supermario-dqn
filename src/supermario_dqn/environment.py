@@ -20,6 +20,10 @@ class MarioEnvironment():
     Provides environment for SuperMario Bros
     """
 
+    # static methods
+    actions = [['right'], ['right', 'A', 'B'], ['right', 'A'], ['left']]
+    n_actions = 4
+
     def __init__(self, n_frames: int, preprocess: Callable, random=False, world_stage: (int, int) = None,
                  render: bool = False):
 
@@ -45,9 +49,7 @@ class MarioEnvironment():
 
         self._preprocess = preprocess
         self.n_frames = n_frames
-        self.actions = [['right'], ['right', 'A', 'B'], ['right', 'A'], ['left']]
         self._env = JoypadSpace(gym.make(world_name), self.actions + [['NOOP']])
-        self.n_actions = len(self.actions)
 
     @property
     def curr_world(self):
