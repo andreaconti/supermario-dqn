@@ -20,7 +20,10 @@ class MarioEnvironment():
     Provides environment for SuperMario Bros
     """
 
-    def __init__(self, n_frames: int, preprocess: Callable, random=False, world_stage: (int, int) = None):
+    def __init__(self, n_frames: int, preprocess: Callable, random=False, world_stage: (int, int) = None,
+                 render: bool = False):
+
+        self._render = render
 
         # compute world
         world_name = 'SuperMarioBros-v0'
@@ -69,6 +72,9 @@ class MarioEnvironment():
             self._env = JoypadSpace(gym.make('SuperMarioBros-{}-{}-v0'.format(self._world, self._stage)), self.actions + [['NOOP']])  # noqa
             frame = self._env.reset()
 
+        if self._render:
+            self._env.render()
+
         frame_ = self._preprocess(self._world, self._stage, frame)
 
         self.frames = deque([frame_]*self.n_frames, self.n_frames)
@@ -98,6 +104,9 @@ class MarioEnvironment():
             self._world = info['world']
             self._stage = info['stage']
 
+            if self._render:
+                self._env.render()
+
             if original:
                 original_frames.append(frame)
 
@@ -111,6 +120,9 @@ class MarioEnvironment():
             reward += reward_
             self._world = info['world']
             self._stage = info['stage']
+
+            if self._render:
+                self._env.render()
 
         self._last_y_pos = last_y_pos
 

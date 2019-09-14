@@ -56,11 +56,14 @@ def main():
                         help='finally show a play')
     parser.add_argument('--random', action='store_true',
                         help='choose randomly different worlds and stages')
+    parser.add_argument('--render', action='store_true',
+                        help='rendering of frames, only for debug')
 
     args = vars(parser.parse_args())
 
     # log params
     show = args.pop('finally_show')
+    render = args.pop('render')
     print('training parameters:')
     for k, v in args.items():
         print('{:15} {}'.format(k, v))
@@ -72,7 +75,7 @@ def main():
             params_log.write('{:15} {}\n'.format(k, v))
 
     # create environment, DQN and start training
-    env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56), random=args.pop('random'))
+    env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56), random=args.pop('random'), render=render)
     model = nn.create([4, 30, 56], env.n_actions, load_state_from=args.pop('load'), for_train=True)
     nn.train(model, env, device=_device, **args)
 
