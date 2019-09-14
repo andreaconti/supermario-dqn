@@ -87,10 +87,12 @@ def main():
         print('{:15} {}'.format(k, v))
     if args['log_file_dir'] is not None:
         with open(os.path.join(args['log_file_dir'], 'parameters.log'), 'w') as params_log:
-            params_log.write('{:15} {}\n'.format(k, v))
+            for k, v in args.items():
+                params_log.write('{:15} {}\n'.format(k, v))
     else:
         with open('parameters.log', 'w') as params_log:
-            params_log.write('{:15} {}\n'.format(k, v))
+            for k, v in args.items():
+                params_log.write('{:15} {}\n'.format(k, v))
 
     # create environment, DQN and start training
     model = nn.create([4, 30, 56], MarioEnvironment.n_actions, load_state_from=args.pop('load'), for_train=True)
