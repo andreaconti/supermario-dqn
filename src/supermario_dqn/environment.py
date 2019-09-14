@@ -140,6 +140,10 @@ class MarioEnvironment():
             frame_ = frame
         self.frames.appendleft(frame_)
 
+        # check done
+        if self._selected is not None and (self._selected[0] != self._world or self._selected[1] != self._stage):
+            done = True
+
         # return
         if not original:
             return torch.stack(tuple(self.frames)), reward, done, info

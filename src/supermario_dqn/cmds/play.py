@@ -9,24 +9,30 @@ import matplotlib.pyplot as plt
 import argparse
 
 
-def main(model=None, world_stage=None):
+def main(model=None, world_stage=None, skip=1):
 
+    skip_ = skip
     if model is None:
         parser = argparse.ArgumentParser('play a game')
         parser.add_argument('model', type=str, help='neural network model')
         parser.add_argument('--world_stage', type=int, nargs=2, default=None,
                             help='select a specific world and stage, world in [1..8], stage in [1..4]')
+        parser.add_argument('--skip', type=int, default=1,
+                            help='number of frames to skip')
         args = vars(parser.parse_args())
 
         env = MarioEnvironment(4, lambda w, s, t: preprocess(w, s, t, 30, 56), world_stage=args['world_stage'])
         model = nn.create([4, 30, 56], env.n_actions, load_state_from=args['model'])
         model.requires_grad_(False)
+
+        skip_ = args['skip']
     else:
         env = MarioEnvironment(4, lambda w, s, t: preprocess(w, s, t, 30, 56), world_stage=world_stage)
 
     # play loop
     done = False
     step = 0
+    i = 0
     reward = 0
     [pr_state, _] = env.reset(original=True)
     plt.figure(1)
@@ -39,9 +45,11 @@ def main(model=None, world_stage=None):
         reward += r
 
         for state in or_states:
-            plt.imshow(state)
-            plt.xlabel(f'reward {reward}')
-            plt.pause(0.05)
+            if i % skip_ == 0:
+                plt.imshow(state)
+                plt.xlabel(f'reward {reward}')
+                plt.pause(0.05)
+            i += 1
 
     print(f'final reward: {reward}')
     print(f'number of steps: {step}')
