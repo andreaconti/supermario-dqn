@@ -246,7 +246,7 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
                 target_net.load_state_dict(policy_net.state_dict())
 
             # Save on file
-            if i_episode % save_interval == 0:
+            if save_interval is not None and i_episode % save_interval == 0:
                 if verbose > 0:
                     print(f'[{datetime.datetime.now().strftime("%d:%m:%Y %H:%M")}] saving model ({total_step} total steps done)')  # noqa
                 torch.save(policy_net.state_dict(), save_path)
