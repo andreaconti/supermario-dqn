@@ -131,10 +131,15 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
 
     if verbose > 0:
         if log_file_dir is not None:
-            episode_log_file = open(os.path.join(log_file_dir, 'episodes' + log_postfix, '.csv'), 'w')
+            episode_log_file_path = os.path.join(log_file_dir, 'episodes.csv')
         else:
-            episode_log_file = open(os.path.join('episodes' + log_postfix + '.csv'), 'w')
-        episode_log_file.write('episode,reward,steps,choosen_moves,random_moves\n')
+            episode_log_file_path = os.path.join('episodes.csv')
+
+        if not os.path.isfile(episode_log_file_path):
+            episode_log_file = open(episode_log_file_path, 'w')
+            episode_log_file.write('episode,reward,steps,choosen_moves,random_moves\n')
+        else:
+            episode_log_file = open(episode_log_file_path, 'a')
 
     if log_file_dir is not None:
         fitting_log_file = open(os.path.join(log_file_dir, 'fitting_log' + log_postfix + '.csv'), 'w')
