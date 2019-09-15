@@ -21,21 +21,32 @@ else:
 
 def _create_and_train(proc_index, model, args):
 
-    args_ = args
-
-    # identify multiple workers
-    if proc_index is not None:
-        args_['log_postfix'] = str(proc_index)
-
-    # disable saving for multiple workers
-    if proc_index is not None and proc_index != 0:
-        args_['save_interval'] = None
-
+    # define environment
     env = MarioEnvironment(SIMPLE_ACTIONS, 4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56),
-                           random=args_.pop('random'),
-                           render=args_.pop('render'),
-                           world_stage=args_.pop('world_stage'))
-    nn.train(model, env, device=_device, **args_)
+                           random=args.pop('random'),
+                           render=args.pop('render'),
+                           world_stage=args.pop('world_stage'))
+
+    # define callbacks
+    save_interval = args.pop('save_interval')
+    save_path = args.pop('save_path')
+    callbacks = [
+        nn.callbacks.console_logger,
+        nn.callbacks.log_episodes('episodes.csv')
+    ]
+    if proc_index is None or proc_index == 0:
+        callbacks.append(nn.callbacks.save_model(save_path, save_interval))
+
+    # define memory
+    memory = nn.RandomReplayMemory(args.pop('memory_size'))
+
+    # train
+    nn.train_dqn(model, env, memory=memory, device=_device, callbacks=callbacks, **args)
+
+    # save
+    if os.path.isfile(save_path):
+        os.remove(save_path)
+    torch.save(model, save_path)
 
 
 def main():
@@ -66,12 +77,8 @@ def main():
                         help='size of replay memory')
     parser.add_argument('--num_episodes', type=int, default=4000,
                         help='number of games to be played before end')
-    parser.add_argument('--verbose', type=int, default=1,
-                        help='verbosity of output')
     parser.add_argument('--load', type=str, default=None,
                         help='load a saved state_dict')
-    parser.add_argument('--log_file_dir', type=str, default=None,
-                        help='file path where write logs')
     parser.add_argument('--finally_show', action='store_true',
                         help='finally show a play')
     parser.add_argument('--random', action='store_true',
@@ -94,14 +101,9 @@ def main():
     print('training parameters:')
     for k, v in args.items():
         print('{:15} {}'.format(k, v))
-    if args['log_file_dir'] is not None:
-        with open(os.path.join(args['log_file_dir'], 'parameters.log'), 'w') as params_log:
-            for k, v in args.items():
-                params_log.write('{:15} {}\n'.format(k, v))
-    else:
-        with open('parameters.log', 'w') as params_log:
-            for k, v in args.items():
-                params_log.write('{:15} {}\n'.format(k, v))
+    with open('parameters.log', 'w') as params_log:
+        for k, v in args.items():
+            params_log.write('{:15} {}\n'.format(k, v))
 
     # create environment, DQN and start training
     model = nn.create([4, 30, 56], len(SIMPLE_ACTIONS), load_state_from=args.pop('load'), for_train=True)
@@ -116,8 +118,6 @@ def main():
         mp.spawn(_create_and_train, args=(model, args), nprocs=workers, join=True)
     else:
         print('[Error] workers >= 1')
-
-    print('end of training.')
 
     # show
     if show:
