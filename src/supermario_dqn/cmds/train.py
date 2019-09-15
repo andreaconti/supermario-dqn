@@ -20,13 +20,22 @@ else:
 
 
 def _create_and_train(proc_index, model, args):
+
+    args_ = args
+
+    # identify multiple workers
     if proc_index is not None:
-        args['log_postfix'] = str(proc_index)
+        args_['log_postfix'] = str(proc_index)
+
+    # disable saving for multiple workers
+    if proc_index is not None and proc_index != 0:
+        args_['save_interval'] = None
+
     env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56),
-                           random=args.pop('random'),
-                           render=args.pop('render'),
-                           world_stage=args.pop('world_stage'))
-    nn.train(model, env, device=_device, **args)
+                           random=args_.pop('random'),
+                           render=args_.pop('render'),
+                           world_stage=args_.pop('world_stage'))
+    nn.train(model, env, device=_device, **args_)
 
 
 def main():
