@@ -2,13 +2,13 @@
 Test environment utilities
 """
 
-import supermario_dqn.environment as mario_env
+import supermario_dqn.env as mario_env
 from supermario_dqn.preprocess import preprocess
 import torch
 
 
 def test_reset():
-    env = mario_env.MarioEnvironment(3, lambda w, s, t: preprocess(w, s, t, 35, 60))
+    env = mario_env.MarioEnvironment(mario_env.SIMPLE_ACTIONS, 3, lambda w, s, t: preprocess(w, s, t, 35, 60))
     state = env.reset()
 
     assert(type(state) == torch.Tensor)
@@ -16,7 +16,7 @@ def test_reset():
 
 
 def test_step():
-    env = mario_env.MarioEnvironment(3, lambda w, s, t: preprocess(w, s, t, 35, 60))
+    env = mario_env.MarioEnvironment(mario_env.SIMPLE_ACTIONS, 3, lambda w, s, t: preprocess(w, s, t, 35, 60))
     env.reset()
     state, _, _, _ = env.step(0)
 
@@ -25,13 +25,15 @@ def test_step():
 
 
 def test_world_stage():
-    env = mario_env.MarioEnvironment(3, lambda w, s, t: preprocess(w, s, t, 35, 60), world_stage=(2, 3))
+    env = mario_env.MarioEnvironment(mario_env.SIMPLE_ACTIONS,
+                                     3, lambda w, s, t: preprocess(w, s, t, 35, 60), world_stage=(2, 3))
     env.reset()
     state, _, _, _ = env.step(0)
 
 
 def test_random():
-    env = mario_env.MarioEnvironment(3, lambda w, s, t: preprocess(w, s, t, 35, 60), random=True)
+    env = mario_env.MarioEnvironment(mario_env.SIMPLE_ACTIONS,
+                                     3, lambda w, s, t: preprocess(w, s, t, 35, 60), random=True)
     env.reset()
 
     curr_world = env._world

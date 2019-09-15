@@ -2,7 +2,7 @@
 Play a game loading a model.pt file
 """
 
-from supermario_dqn.environment import MarioEnvironment
+from supermario_dqn.env import MarioEnvironment, SIMPLE_ACTIONS
 from supermario_dqn.preprocess import preprocess
 import supermario_dqn.nn as nn
 import matplotlib.pyplot as plt
@@ -24,14 +24,15 @@ def main(model=None, world_stage=None, skip=1):
                             help='shows frames processed for neural network')
         args = vars(parser.parse_args())
 
-        env = MarioEnvironment(4, lambda w, s, t: preprocess(w, s, t, 30, 56), world_stage=args['world_stage'])
+        env = MarioEnvironment(SIMPLE_ACTIONS,
+                               4, lambda w, s, t: preprocess(w, s, t, 30, 56), world_stage=args['world_stage'])
         model = nn.create([4, 30, 56], env.n_actions, load_state_from=args['model'])
         model.requires_grad_(False)
 
         skip_ = args['skip']
         show_processed = args['processed']
     else:
-        env = MarioEnvironment(4, lambda w, s, t: preprocess(w, s, t, 30, 56), world_stage=world_stage)
+        env = MarioEnvironment(SIMPLE_ACTIONS, 4, lambda w, s, t: preprocess(w, s, t, 30, 56), world_stage=world_stage)
 
     # play loop
     done = False

@@ -5,7 +5,7 @@ Handles supermario training
 import torch
 import torch.multiprocessing as mp
 import os
-from supermario_dqn.environment import MarioEnvironment
+from supermario_dqn.env import MarioEnvironment, SIMPLE_ACTIONS
 import supermario_dqn.nn as nn
 import supermario_dqn.preprocess as pr
 import argparse
@@ -31,7 +31,7 @@ def _create_and_train(proc_index, model, args):
     if proc_index is not None and proc_index != 0:
         args_['save_interval'] = None
 
-    env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56),
+    env = MarioEnvironment(SIMPLE_ACTIONS, 4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56),
                            random=args_.pop('random'),
                            render=args_.pop('render'),
                            world_stage=args_.pop('world_stage'))
@@ -104,7 +104,7 @@ def main():
                 params_log.write('{:15} {}\n'.format(k, v))
 
     # create environment, DQN and start training
-    model = nn.create([4, 30, 56], MarioEnvironment.n_actions, load_state_from=args.pop('load'), for_train=True)
+    model = nn.create([4, 30, 56], len(SIMPLE_ACTIONS), load_state_from=args.pop('load'), for_train=True)
     if workers == 1:
         _create_and_train(None, model, args)
     elif workers > 1:

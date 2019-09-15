@@ -15,16 +15,16 @@ __all__ = ['State', 'MarioEnvironment']
 State = torch.Tensor
 
 
+# Definition of actions spaces
+SIMPLE_ACTIONS = [['right'], ['right', 'A', 'B'], ['right', 'A'], ['left']]
+
+
 class MarioEnvironment():
     """
     Provides environment for SuperMario Bros
     """
 
-    # static methods
-    actions = [['right'], ['right', 'A', 'B'], ['right', 'A'], ['left']]
-    n_actions = 4
-
-    def __init__(self, n_frames: int, preprocess: Callable, random=False, world_stage: (int, int) = None,
+    def __init__(self, actions, n_frames: int, preprocess: Callable, random=False, world_stage: (int, int) = None,
                  render: bool = False):
 
         self._render = render
@@ -49,7 +49,16 @@ class MarioEnvironment():
 
         self._preprocess = preprocess
         self.n_frames = n_frames
-        self._env = JoypadSpace(gym.make(world_name), self.actions + [['NOOP']])
+        self._actions = actions
+
+        self._env_actions = actions
+        if ['NOOP'] not in self._env_actions:
+            self._env_actions = self._env_actions + [['NOOP']]
+        self._env = JoypadSpace(gym.make(world_name), self._env_actions)
+
+    @property
+    def actions(self):
+        return self._actions
 
     @property
     def curr_world(self):
@@ -71,7 +80,7 @@ class MarioEnvironment():
         else:
             self._world = r.sample(range(1, 9), 1)[0]
             self._stage = r.sample(range(1, 5), 1)[0]
-            self._env = JoypadSpace(gym.make('SuperMarioBros-{}-{}-v0'.format(self._world, self._stage)), self.actions + [['NOOP']])  # noqa
+            self._env = JoypadSpace(gym.make('SuperMarioBros-{}-{}-v0'.format(self._world, self._stage)), self._env_actions)  # noqa
             frame = self._env.reset()
 
         if self._render:
@@ -90,7 +99,7 @@ class MarioEnvironment():
 
     def step(self, action: int, original: bool = False, apply_times: int = 3):
 
-        noop_action: int = self.n_actions
+        noop_action: int = self._env_actions.index(['NOOP'])
         last_x_pos: int = 0
         last_y_pos: int = 0
         reward = 0

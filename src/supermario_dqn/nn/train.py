@@ -1,124 +1,31 @@
 """
-Module containing utilities for training
+training algorithms
 """
 
-import math
-import random
-import typing
+from supermario_dqn.env import MarioEnvironment
+from supermario_dqn.nn.memory import RandomReplayMemory, Transition
+from supermario_dqn.nn.model import DQN
+
 import os
-from collections import namedtuple, deque
 import datetime
+import random
+import math
 
 import torch
+from torch import optim
 import torch.nn.functional as F
-from torch import nn, optim
-
-from supermario_dqn.environment import MarioEnvironment
 
 
-__all__ = ['create', 'train']
-
-
-# UTILS stuff
-
-_Transition = namedtuple('_Transition',
-                         ('state', 'action', 'next_state', 'reward'))
-
-
-class _ReplayMemory(object):
-
-    def __init__(self, capacity: int):
-        self.memory = deque([], maxlen=capacity)
-
-    def push(self, transition):
-        """Saves a transition."""
-        self.memory.append(transition)
-
-    def sample(self, batch_size: int):
-        return random.sample(self.memory, batch_size)
-
-    def __len__(self):
-        return len(self.memory)
-
-
-# COMPUTE model
-
-class DQN(nn.Module):
-    """
-    class of the used Q-value Neural Network
-    """
-
-    def __init__(self, channels: int, height: int, width: int, outputs: int):
-        super(DQN, self).__init__()
-
-        # parameters
-        self._outputs = outputs
-        self._channels = channels
-        self._height = height
-        self._width = width
-
-        # CNN
-        self.conv1 = nn.Conv2d(channels, 32, kernel_size=6, stride=3)
-        self.bn1 = nn.BatchNorm2d(32)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
-        self.bn2 = nn.BatchNorm2d(64)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
-        self.bn3 = nn.BatchNorm2d(64)
-
-        # Dense
-        convw = DQN._conv2d_size_out(DQN._conv2d_size_out(DQN._conv2d_size_out(width, kernel_size=6, stride=3),
-                                     kernel_size=4, stride=2), kernel_size=3, stride=1)
-        convh = DQN._conv2d_size_out(DQN._conv2d_size_out(DQN._conv2d_size_out(height, kernel_size=6, stride=3),
-                                     kernel_size=4, stride=2), kernel_size=3, stride=1)
-        linear_input_size = convw * convh * 64
-        self.fc1 = nn.Linear(linear_input_size, 512)
-        self.head = nn.Linear(512, outputs)
-
-    def _conv2d_size_out(size: int, kernel_size: int = 5, stride: int = 2):
-        return (size - (kernel_size - 1) - 1) // stride + 1
-
-    def forward(self, x):
-        x = F.leaky_relu(self.bn1(self.conv1(x)))
-        x = F.leaky_relu(self.bn2(self.conv2(x)))
-        x = F.leaky_relu(self.bn3(self.conv3(x)))
-        x = F.leaky_relu(self.fc1(x.view(x.size(0), -1)))
-        x = F.softsign(self.head(x)) * 15.
-        return x
-
-
-# FUNCTIONS
-
-def create(size: typing.List[int], outputs: int,
-           load_state_from: str = None, for_train=False) -> DQN:
-    """
-    create model
-    """
-    if len(size) != 3 or size[0] < 0 or size[1] < 0 or size[2] < 0:
-        raise ValueError(f'size must be positive: [channels, height, width]')
-
-    dqn = DQN(size[0], size[1], size[2], outputs)
-
-    if load_state_from is not None:
-        if torch.cuda.is_available():
-            dqn.load_state_dict(torch.load(load_state_from))
-        else:
-            dqn.load_state_dict(torch.load(load_state_from, map_location=torch.device('cpu')))
-
-    if not for_train:
-        dqn.eval()
-
-    return dqn
-
-
-def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=32,
-          gamma=0.98, eps_start=0.9, eps_end=0.05, eps_decay=200, target_update=15,
-          save_path='model.pt', save_interval=10, memory_size=200000, num_episodes=50,
+def train(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(200000),
+          batch_size=128, fit_interval=32, gamma=0.98, eps_start=0.9,
+          eps_end=0.05, eps_decay=200, target_update=15, save_path='model.pt',
+          save_interval=10, memory_size=200000, num_episodes=50,
           device='cpu', log_file_dir=None, verbose=1, log_postfix=''):
     """
     Handles training of network
     """
 
-    n_actions = env.n_actions
+    n_actions = len(env.actions)
     assert(n_actions == policy_net._outputs)
 
     # switch to CPU or GPU
@@ -129,7 +36,6 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
     target_net.load_state_dict(policy_net.state_dict())
     target_net.to(device)
     target_net.eval()
-    memory = _ReplayMemory(memory_size)
     optimizer = optim.Adam(policy_net.parameters())
 
     if verbose > 0:
@@ -180,7 +86,7 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
             return
 
         transitions = memory.sample(batch_size)
-        batch = _Transition(*zip(*transitions))
+        batch = Transition(*zip(*transitions))
 
         non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
                                                 batch.next_state)), device=device, dtype=torch.bool)
@@ -223,10 +129,10 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
                 reward = torch.tensor([reward], device=device, dtype=torch.float32)
 
                 if not done:
-                    memory.push(_Transition(curr_state, action, next_state, reward))
+                    memory.push(Transition(curr_state, action, next_state, reward))
                     curr_state = next_state
                 else:
-                    memory.push(_Transition(curr_state, action, None, reward))
+                    memory.push(Transition(curr_state, action, None, reward))
 
                 # Perform one step of the optimization (on the target network)
                 if steps_done % fit_interval == 0:
@@ -271,10 +177,3 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
 
         # save network
         torch.save(policy_net.state_dict(), save_path)
-
-
-def best_action(model: DQN, state: torch.Tensor) -> int:
-    """
-    provides best action for given state
-    """
-    return model(state).max(1)[1].view(1, 1).item()
