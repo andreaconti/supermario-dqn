@@ -3,6 +3,7 @@ Handles supermario training
 """
 
 import torch
+import torch.multiprocessing as mp
 import os
 from supermario_dqn.environment import MarioEnvironment
 import supermario_dqn.nn as nn
@@ -16,6 +17,25 @@ if torch.cuda.is_available():
 else:
     _device = torch.device('cpu')
     print('[Warning] using CPU for training')
+
+
+def _create_and_train(proc_index, model, args):
+
+    args_ = args
+
+    # identify multiple workers
+    if proc_index is not None:
+        args_['log_postfix'] = str(proc_index)
+
+    # disable saving for multiple workers
+    if proc_index is not None and proc_index != 0:
+        args_['save_interval'] = None
+
+    env = MarioEnvironment(4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56),
+                           random=args_.pop('random'),
+                           render=args_.pop('render'),
+                           world_stage=args_.pop('world_stage'))
+    nn.train(model, env, device=_device, **args_)
 
 
 def main():
@@ -54,25 +74,50 @@ def main():
                         help='file path where write logs')
     parser.add_argument('--finally_show', action='store_true',
                         help='finally show a play')
+    parser.add_argument('--random', action='store_true',
+                        help='choose randomly different worlds and stages')
+    parser.add_argument('--render', action='store_true',
+                        help='rendering of frames, only for debug')
+    parser.add_argument('--workers', type=int, default=1,
+                        help='multiprocessing enable')
+    parser.add_argument('--world_stage', type=int, nargs=2, default=None,
+                        help='select specific world and stage')
 
     args = vars(parser.parse_args())
 
+    if args['world_stage'] is not None:
+        args['random'] = False
+
     # log params
     show = args.pop('finally_show')
+    workers = args.pop('workers')
     print('training parameters:')
     for k, v in args.items():
         print('{:15} {}'.format(k, v))
     if args['log_file_dir'] is not None:
         with open(os.path.join(args['log_file_dir'], 'parameters.log'), 'w') as params_log:
-            params_log.write('{:15} {}\n'.format(k, v))
+            for k, v in args.items():
+                params_log.write('{:15} {}\n'.format(k, v))
     else:
         with open('parameters.log', 'w') as params_log:
-            params_log.write('{:15} {}\n'.format(k, v))
+            for k, v in args.items():
+                params_log.write('{:15} {}\n'.format(k, v))
 
     # create environment, DQN and start training
-    env = MarioEnvironment(4, lambda t: pr.preprocess(t, 30, 56))
-    model = nn.create([4, 30, 56], env.n_actions, load_state_from=args.pop('load'), for_train=True)
-    nn.train(model, env, device=_device, **args)
+    model = nn.create([4, 30, 56], MarioEnvironment.n_actions, load_state_from=args.pop('load'), for_train=True)
+    if workers == 1:
+        _create_and_train(None, model, args)
+    elif workers > 1:
+        model.share_memory()
+
+        args['num_episodes'] = args['num_episodes'] // workers
+        args['memory_size'] = args['memory_size'] // workers
+
+        mp.spawn(_create_and_train, args=(model, args), nprocs=workers, join=True)
+    else:
+        print('[Error] workers >= 1')
+
+    print('end of training.')
 
     # show
     if show:

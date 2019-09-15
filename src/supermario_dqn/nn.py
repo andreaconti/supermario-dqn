@@ -5,7 +5,8 @@ Module containing utilities for training
 import math
 import random
 import typing
-from collections import namedtuple
+import os
+from collections import namedtuple, deque
 import datetime
 
 import torch
@@ -27,18 +28,13 @@ _Transition = namedtuple('_Transition',
 class _ReplayMemory(object):
 
     def __init__(self, capacity: int):
-        self.capacity = capacity
-        self.memory = []
-        self.position = 0
+        self.memory = deque([], maxlen=capacity)
 
     def push(self, transition):
         """Saves a transition."""
-        if len(self.memory) < self.capacity:
-            self.memory.append(None)
-        self.memory[self.position] = transition
-        self.position = (self.position + 1) % self.capacity
+        self.memory.append(transition)
 
-    def sample(self, batch_size):
+    def sample(self, batch_size: int):
         return random.sample(self.memory, batch_size)
 
     def __len__(self):
@@ -117,7 +113,7 @@ def create(size: typing.List[int], outputs: int,
 def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=32,
           gamma=0.98, eps_start=0.9, eps_end=0.05, eps_decay=200, target_update=15,
           save_path='model.pt', save_interval=10, memory_size=200000, num_episodes=50,
-          device='cpu', log_file_dir=None, verbose=1):
+          device='cpu', log_file_dir=None, verbose=1, log_postfix=''):
     """
     Handles training of network
     """
@@ -138,15 +134,20 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
 
     if verbose > 0:
         if log_file_dir is not None:
-            episode_log_file = open(log_file_dir + '/episodes.csv', 'w')
+            episode_log_file_path = os.path.join(log_file_dir, 'episodes.csv')
         else:
-            episode_log_file = open('episodes.csv', 'w')
-        episode_log_file.write('episode,reward,steps,choosen_moves,random_moves\n')
+            episode_log_file_path = os.path.join('episodes.csv')
+
+        if not os.path.isfile(episode_log_file_path):
+            episode_log_file = open(episode_log_file_path, 'w')
+            episode_log_file.write('episode,reward,steps,choosen_moves,random_moves\n')
+        else:
+            episode_log_file = open(episode_log_file_path, 'a')
 
     if log_file_dir is not None:
-        fitting_log_file = open(log_file_dir + '/fitting_log.csv\n', 'w')
+        fitting_log_file = open(os.path.join(log_file_dir, 'fitting_log' + log_postfix + '.csv'), 'w')
         fitting_log_file.write('episode,step,mean_error\n')
-        qvalues_log_file = open(log_file_dir + '/qvalues_log.csv', 'w')
+        qvalues_log_file = open(os.path.join(log_file_dir, 'qvalues_log', log_postfix + '.csv'), 'w')
         qvalues_log_file.write('episode,step,' + ','.join(["{}{}".format(a, b) for a, b in zip(['action'] * n_actions, range(n_actions))]) + ',choosen,reward') # noqa
 
     # for logs
@@ -244,7 +245,7 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
 
             # print
             if verbose > 0:
-                print(f'[{datetime.datetime.now().strftime("%d:%m:%Y %H:%M")}] end episode ({i_episode+1}/{num_episodes} | {steps_done} steps): {episode_reward} reward')  # noqa
+                print(f'[{datetime.datetime.now().strftime("%d:%m:%Y %H:%M")}] end episode ({i_episode+1}/{num_episodes}, world: {env.curr_world} stage: {env.curr_stage}, {steps_done} steps): {episode_reward} reward')  # noqa
 
             # Update the target network, copying all weights and biases in DQN
             if i_episode % target_update == 0:
@@ -253,7 +254,7 @@ def train(policy_net: DQN, env: MarioEnvironment, batch_size=128, fit_interval=3
                 target_net.load_state_dict(policy_net.state_dict())
 
             # Save on file
-            if i_episode % save_interval == 0:
+            if save_interval is not None and i_episode % save_interval == 0:
                 if verbose > 0:
                     print(f'[{datetime.datetime.now().strftime("%d:%m:%Y %H:%M")}] saving model ({total_step} total steps done)')  # noqa
                 torch.save(policy_net.state_dict(), save_path)
