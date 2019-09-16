@@ -45,7 +45,7 @@ def _create_and_train(proc_index, device, model, args):
     # save
     if os.path.isfile(save_path):
         os.remove(save_path)
-    torch.save(model, save_path)
+    torch.save(model.state_dict(), save_path)
 
 
 def main():
