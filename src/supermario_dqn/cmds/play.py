@@ -26,7 +26,7 @@ def main(model=None, world_stage=None, skip=1):
 
         env = MarioEnvironment(SIMPLE_ACTIONS,
                                4, lambda w, s, t: preprocess(w, s, t, 30, 56), world_stage=args['world_stage'])
-        model = nn.create([4, 30, 56], env.n_actions, load_state_from=args['model'])
+        model = nn.create([4, 30, 56], len(SIMPLE_ACTIONS), load_state_from=args['model'])
         model.requires_grad_(False)
 
         skip_ = args['skip']
