@@ -20,27 +20,28 @@ def console_logger(mode, _, info):
         print('end training.')
 
 
-def log_episodes(path):
+def log_episodes(path_or_file, close=True):
     """
     Returns a callback that saves a log of episodes
     """
 
     def log_episodes_(mode, f, info):
         if mode == 'init':
-
-            if os.path.isfile(path):
-                f = open(path, 'a')
+            if type(path_or_file) is str:
+                if os.path.isfile(path_or_file):
+                    f = open(path_or_file, 'a')
+                else:
+                    f = open(path_or_file, 'a')
+                    f.write('episode,reward,steps\n')
             else:
-                f = open(path, 'w')
-                f.write('time,episode,reward,steps\n')
+                f = path_or_file
             return f
 
         elif mode == 'run':
-
             f.write('{},{},{}\n'.format(info['episode'], info['reward'], info['steps']))
             return f
 
-        elif mode == 'close':
+        elif mode == 'close' and close:
             f.close()
 
     return log_episodes_

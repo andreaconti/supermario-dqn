@@ -12,14 +12,7 @@ import argparse
 from supermario_dqn.cmds.play import main as show_game
 
 
-if torch.cuda.is_available():
-    _device = torch.device('cuda')
-else:
-    _device = torch.device('cpu')
-    print('[Warning] using CPU for training')
-
-
-def _create_and_train(proc_index, model, args):
+def _create_and_train(proc_index, device, model, args):
 
     # define environment
     env = MarioEnvironment(SIMPLE_ACTIONS, 4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56),
@@ -45,7 +38,7 @@ def _create_and_train(proc_index, model, args):
                        env,
                        memory=memory,
                        action_policy=nn.train.epsilon_greedy_choose(args.pop('eps_start'), args.pop('eps_end'), args.pop('eps_decay')),  # noqa
-                       device=_device,
+                       device=device,
                        callbacks=callbacks,
                        **args)
 
@@ -60,6 +53,12 @@ def main():
     Starts training, handles many parameters for training and also in order to
     load a .pt state_dict
     """
+
+    if torch.cuda.is_available():
+        _device = torch.device('cuda')
+    else:
+        _device = torch.device('cpu')
+        print('[Warning] using CPU for training')
 
     # parse arguments
     parser = argparse.ArgumentParser(description='Handle training')
@@ -123,7 +122,7 @@ def main():
         args['num_episodes'] = args['num_episodes'] // workers
         args['memory_size'] = args['memory_size'] // workers
 
-        mp.spawn(_create_and_train, args=(model, args), nprocs=workers, join=True)
+        mp.spawn(_create_and_train, args=(_device, model, args), nprocs=workers, join=True)
     else:
         print('[Error] workers >= 1')
 
