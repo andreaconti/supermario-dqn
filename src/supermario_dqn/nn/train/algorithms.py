@@ -3,11 +3,9 @@ training algorithms
 """
 
 from supermario_dqn.env import MarioEnvironment
-from supermario_dqn.nn.memory import RandomReplayMemory, Transition
+from supermario_dqn.nn.train.memory import RandomReplayMemory, Transition
 from supermario_dqn.nn.model import DQN
-
-import random
-import math
+from supermario_dqn.nn.train.exploration import epsilon_greedy_choose
 
 import torch
 from torch import optim
@@ -18,9 +16,9 @@ __ALL__ = ['train_dqn']
 
 
 def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(200000),
-              batch_size=128, fit_interval=32, gamma=0.98, eps_start=0.9,
-              eps_end=0.05, eps_decay=200, target_update=15, optimizer_f=optim.Adam,
-              num_episodes=50, device='cpu', train_id=0, callbacks=[]):
+              action_policy=epsilon_greedy_choose(0.9, 0.05, 200), batch_size=128, fit_interval=32,
+              gamma=0.98, target_update=15, optimizer_f=optim.Adam, num_episodes=50,
+              device='cpu', train_id=0, callbacks=[]):
     """
     Handles training of network
     """
@@ -47,25 +45,6 @@ def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(
     # for logs
     curr_episode = 0  # current episode
     steps_done = 0  # step in a single episode
-    choosen_moves = 0  # number of choosen moves in a single episode
-    random_moves = 0  # number of random moves in a single episode
-
-    # select random action
-    total_step = 0
-
-    def select_action(state):
-        nonlocal total_step, choosen_moves, random_moves
-        sample = random.random()
-        eps_threshold = eps_end + (eps_start - eps_end) * math.exp(-1. * total_step / eps_decay)
-        total_step += 1
-        if sample > eps_threshold:
-            choosen_moves += 1
-            with torch.no_grad():
-                qvalues = policy_net(state)
-                return qvalues.max(1)[1].view(1, 1), qvalues
-        else:
-            random_moves += 1
-            return torch.tensor([[random.randrange(n_actions)]], device=device, dtype=torch.long), None
 
     # perform a single optimization step
     def optimize_model():
@@ -100,15 +79,13 @@ def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(
     for i_episode in range(num_episodes):
         curr_episode = i_episode + 1
         steps_done = 0
-        choosen_moves = 0
-        random_moves = 0
         episode_reward = 0
         curr_state = env.reset()
         done = False
 
         while not done:
             steps_done += 1
-            action, qvalues = select_action(curr_state.unsqueeze(0).to(device))
+            action = action_policy(n_actions, policy_net, curr_state.unsqueeze(0).to(device)).to(device)
             next_state, reward, done, _ = env.step(action.item())
             episode_reward += reward
             reward = torch.tensor([reward], device=device, dtype=torch.float32)
@@ -133,8 +110,6 @@ def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(
                 'episodes': num_episodes,
                 'reward': episode_reward,
                 'steps': steps_done,
-                'choosen_moves': choosen_moves,
-                'random_moves': random_moves,
             })
 
     for callback, args in callbacks_:

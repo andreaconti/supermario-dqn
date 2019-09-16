@@ -31,17 +31,23 @@ def _create_and_train(proc_index, model, args):
     save_interval = args.pop('save_interval')
     save_path = args.pop('save_path')
     callbacks = [
-        nn.callbacks.console_logger,
-        nn.callbacks.log_episodes('episodes.csv')
+        nn.train.callbacks.console_logger,
+        nn.train.callbacks.log_episodes('episodes.csv')
     ]
     if proc_index is None or proc_index == 0:
-        callbacks.append(nn.callbacks.save_model(save_path, save_interval))
+        callbacks.append(nn.train.callbacks.save_model(save_path, save_interval))
 
     # define memory
-    memory = nn.RandomReplayMemory(args.pop('memory_size'))
+    memory = nn.train.RandomReplayMemory(args.pop('memory_size'))
 
     # train
-    nn.train_dqn(model, env, memory=memory, device=_device, callbacks=callbacks, **args)
+    nn.train.train_dqn(model,
+                       env,
+                       memory=memory,
+                       action_policy=nn.train.epsilon_greedy_choose(args.pop('eps_start'), args.pop('eps_end'), args.pop('eps_decay')),  # noqa
+                       device=_device,
+                       callbacks=callbacks,
+                       **args)
 
     # save
     if os.path.isfile(save_path):
@@ -67,6 +73,8 @@ def main():
                         help='start probability to choose a random action')
     parser.add_argument('--eps_end', type=float, default=0.25,
                         help='end probability to choose a random action')
+    parser.add_argument('--eps_decay', type=float, default=200,
+                        help='decay of eps probabilities')
     parser.add_argument('--target_update', type=int, default=15,
                         help='number of episodes between each target dqn update')
     parser.add_argument('--save_interval', type=int, default=30,

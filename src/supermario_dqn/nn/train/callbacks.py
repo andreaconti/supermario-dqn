@@ -3,7 +3,6 @@ Callbacks coroutines used by training functions
 """
 
 import os
-import time
 import torch
 
 
@@ -33,12 +32,12 @@ def log_episodes(path):
                 f = open(path, 'a')
             else:
                 f = open(path, 'w')
-                f.write('time,episode,reward,steps,choosen_moves,random_moves\n')
+                f.write('time,episode,reward,steps\n')
             return f
 
         elif mode == 'run':
 
-            f.write('{},{},{},{},{}\n'.format(int(time.time()), info['episode'], info['reward'], info['steps'], info['choosen_moves'], info['random_moves']))  # noqa
+            f.write('{},{},{}\n'.format(info['episode'], info['reward'], info['steps']))
             return f
 
         elif mode == 'close':
@@ -73,3 +72,19 @@ def model_checkpoint(path: str, interval: int):
     """
     Returns a callback that checkpoints the model
     """
+
+    def model_checkpoint_(mode, counter, info):
+        if mode == 'init':
+            return 0
+
+        if mode == 'run':
+            counter += 1
+            if counter % interval == 0:
+                torch.save({
+                    'model_state_dict': info['model'].state_dict(),
+                    'optimizer_state_dict': info['optimizer'].state_dict(),
+                    'episodes_left': info['episodes'] - info['episode']
+                }, path)
+            return counter
+
+    return model_checkpoint_
