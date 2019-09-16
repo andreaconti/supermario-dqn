@@ -6,7 +6,7 @@ import os
 import torch
 
 
-__ALL__ = ['console_logger', 'log_episodes', 'save_model']
+__ALL__ = ['console_logger', 'log_episodes', 'save_model', 'model_checkpoint']
 
 
 def console_logger(mode, _, info):
@@ -84,7 +84,8 @@ def model_checkpoint(path: str, interval: int):
                 torch.save({
                     'model_state_dict': info['model'].state_dict(),
                     'optimizer_state_dict': info['optimizer'].state_dict(),
-                    'episodes_left': info['episodes'] - info['episode']
+                    'episodes_left': info['episodes'] - info['episode'],
+                    'steps_done': info['total_steps']
                 }, path)
             return counter
 

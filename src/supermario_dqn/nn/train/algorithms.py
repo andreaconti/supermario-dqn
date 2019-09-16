@@ -45,6 +45,7 @@ def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(
     # for logs
     curr_episode = 0  # current episode
     steps_done = 0  # step in a single episode
+    total_steps = 0  # total steps performed
 
     # perform a single optimization step
     def optimize_model():
@@ -85,6 +86,7 @@ def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(
 
         while not done:
             steps_done += 1
+            total_steps += 1
             action = action_policy(n_actions, policy_net, curr_state.unsqueeze(0).to(device)).to(device)
             next_state, reward, done, _ = env.step(action.item())
             episode_reward += reward
@@ -110,6 +112,7 @@ def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(
                 'episodes': num_episodes,
                 'reward': episode_reward,
                 'steps': steps_done,
+                'total_steps': total_steps,
             })
 
     for callback, args in callbacks_:

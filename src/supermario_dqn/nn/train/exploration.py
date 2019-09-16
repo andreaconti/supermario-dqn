@@ -9,9 +9,9 @@ import math
 __ALL__ = ['epsilon_greedy_choose']
 
 
-def epsilon_greedy_choose(eps_start, eps_end, eps_decay):
+def epsilon_greedy_choose(eps_start, eps_end, eps_decay, initial_step=0):
 
-    total_step = 0
+    total_step = initial_step
 
     def select_action_(n_actions, model, state):
         nonlocal total_step
