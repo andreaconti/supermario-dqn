@@ -3,6 +3,7 @@ Callbacks coroutines used by training functions
 """
 
 import os
+import time
 import torch
 
 
@@ -32,13 +33,13 @@ def log_episodes(path_or_file, close=True):
                     f = open(path_or_file, 'a')
                 else:
                     f = open(path_or_file, 'a')
-                    f.write('episode,reward,steps\n')
+                    f.write('time,episode,reward,steps\n')
             else:
                 f = path_or_file
             return f
 
         elif mode == 'run':
-            f.write('{},{},{}\n'.format(info['episode'], info['reward'], info['steps']))
+            f.write('{},{},{},{}\n'.format(int(time.time()), info['episode'], info['reward'], info['steps']))
             return f
 
         elif mode == 'close' and close:
