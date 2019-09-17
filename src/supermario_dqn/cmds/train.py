@@ -115,7 +115,7 @@ def main():
     # create environment, DQN and start training
     model = nn.create([4, 30, 56], len(SIMPLE_ACTIONS), load_state_from=args.pop('load'), for_train=True)
     if workers == 1:
-        _create_and_train(None, model, args)
+        _create_and_train(None, _device, model, args)
     elif workers > 1:
         model.share_memory()
 
