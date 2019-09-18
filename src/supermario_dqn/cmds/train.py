@@ -61,11 +61,15 @@ def _create_and_train(proc_index, device, model, target_net, args):
                            render=args.pop('render'),
                            world_stage=args.pop('world_stage'))
 
+    # create log files
+    with open('episodes.csv', 'w') as episode_file:
+        episode_file.write('time,episode,reward,steps\n')
+
     # define callbacks
     save_path = args.pop('save_path')
     callbacks = [
         nn.train.callbacks.console_logger(start_episode=start_episode),
-        nn.train.callbacks.log_episodes('episodes.csv', start_episode=start_episode)
+        nn.train.callbacks.log_episodes('episodes.csv', start_episode=start_episode, insert_head=False)
     ]
     ckpt_interval = args.pop('checkpoint')
     if ckpt_interval is not None:

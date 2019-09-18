@@ -26,7 +26,7 @@ def console_logger(start_episode=0):
     return console_logger_
 
 
-def log_episodes(path_or_file, close=True, start_episode=0):
+def log_episodes(path_or_file, close=True, start_episode=0, insert_head=True):
     """
     Returns a callback that saves a log of episodes
     """
@@ -38,7 +38,9 @@ def log_episodes(path_or_file, close=True, start_episode=0):
                     f = open(path_or_file, 'a')
                 else:
                     f = open(path_or_file, 'a')
-                    f.write('time,episode,reward,steps\n')
+                    if insert_head:
+                        f.write('time,episode,reward,steps\n')
+                        f.flush()
             else:
                 f = path_or_file
             return f
@@ -121,7 +123,7 @@ def model_checkpoint(path_dir: str, interval: int, meta: dict = None, start_epis
     return model_checkpoint_
 
 
-def test_model(env, save_path, interval, start_episode=0):
+def test_model(env, save_path, interval, start_episode=0, insert_head=True):
     """
     Play a test game and save results
     """
@@ -138,7 +140,9 @@ def test_model(env, save_path, interval, start_episode=0):
                 f = open(save_path, 'a')
             else:
                 f = open(save_path, 'a')
-                f.write('episode,reward\n')
+                if insert_head:
+                    f.write('episode,reward\n')
+                    f.flush()
             counter = 0
             return f, counter
 
@@ -158,6 +162,7 @@ def test_model(env, save_path, interval, start_episode=0):
                         reward += r
 
                 f.write('{},{}\n'.format(info['episode'] + start_episode, reward))
+                f.flush()
             return f, counter
 
         if mode == 'close':
