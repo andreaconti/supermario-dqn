@@ -70,24 +70,31 @@ def save_model(path: str, interval: int, verbose: bool = False):
     return save_model_
 
 
-def model_checkpoint(path: str, interval: int):
+def model_checkpoint(path_dir: str, interval: int):
     """
     Returns a callback that checkpoints the model
     """
 
     def model_checkpoint_(mode, counter, info):
         if mode == 'init':
+            if not os.path.isdir(path_dir):
+                os.mkdir(path_dir)
             return 0
 
         if mode == 'run':
-            counter += 1
+            counter = counter + 1
             if counter % interval == 0:
+                train_id = info['train_id']
+                curr_episode = info['episode']
+                ckpt_dir = os.path.join(path_dir, 'ckpt_at_' + str(curr_episode))
+                if not os.path.isdir(ckpt_dir):
+                    os.mkdir(ckpt_dir)
                 torch.save({
                     'model_state_dict': info['model'].state_dict(),
                     'optimizer_state_dict': info['optimizer'].state_dict(),
                     'episodes_left': info['episodes'] - info['episode'],
                     'steps_done': info['total_steps']
-                }, path)
+                }, os.path.join(ckpt_dir, f'ckpt_{train_id}.ckpt'))
             return counter
 
     return model_checkpoint_

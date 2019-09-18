@@ -17,7 +17,7 @@ __ALL__ = ['train_dqn']
 
 def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(200000),
               action_policy=epsilon_greedy_choose(0.9, 0.05, 200), batch_size=128, fit_interval=32,
-              gamma=0.98, target_update=15, optimizer_f=optim.Adam, num_episodes=50,
+              gamma=0.98, target_update=15, optimizer_f=optim.Adam, optimizer_state_dict=None, num_episodes=50,
               device='cpu', train_id=0, callbacks=[]):
     """
     Handles training of network
@@ -27,10 +27,10 @@ def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(
     assert(n_actions == policy_net._outputs)
 
     # active callbacks
-    callbacks_ = []
+    callbacks_ = {}
     for callback in callbacks:
         args = callback('init', None, None)
-        callbacks_.append([callback, args])
+        callbacks_[callback] = args
 
     # switch to CPU or GPU
     policy_net.to(device)
@@ -40,7 +40,10 @@ def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(
     target_net.load_state_dict(policy_net.state_dict())
     target_net.to(device)
     target_net.eval()
+
     optimizer = optimizer_f(policy_net.parameters())
+    if optimizer_state_dict is not None:
+        optimizer.load_state_dict(optimizer_state_dict)
 
     # for logs
     curr_episode = 0  # current episode
@@ -103,8 +106,8 @@ def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(
                 optimize_model()
 
         # call callbacks
-        for callback, args in callbacks_:
-            callback('run', args, {
+        for callback, args in callbacks_.items():
+            new_state = callback('run', args, {
                 'train_id': train_id,
                 'model': policy_net,
                 'optimizer': optimizer,
@@ -114,6 +117,7 @@ def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(
                 'steps': steps_done,
                 'total_steps': total_steps,
             })
+            callbacks_[callback] = new_state
 
-    for callback, args in callbacks_:
+    for callback, args in callbacks_.items():
         callback('close', args, None)

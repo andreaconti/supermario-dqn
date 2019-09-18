@@ -9,7 +9,10 @@ from supermario_dqn.env import MarioEnvironment, SIMPLE_ACTIONS
 import supermario_dqn.nn as nn
 import supermario_dqn.preprocess as pr
 import argparse
-from supermario_dqn.cmds.play import main as show_game
+
+
+def _find_ckpts(path):
+    return [torch.load(f) for f in os.listdir(path) if f.endswith('.ckpt') and os.path.isfile(f)]
 
 
 def _create_and_train(proc_index, device, model, args):
@@ -21,14 +24,38 @@ def _create_and_train(proc_index, device, model, args):
                            world_stage=args.pop('world_stage'))
 
     # define callbacks
-    save_interval = args.pop('save_interval')
     save_path = args.pop('save_path')
     callbacks = [
         nn.train.callbacks.console_logger,
         nn.train.callbacks.log_episodes('episodes.csv')
     ]
-    if proc_index is None or proc_index == 0:
-        callbacks.append(nn.train.callbacks.save_model(save_path, save_interval))
+    ckpt_interval = args.pop('checkpoint')
+    if ckpt_interval is not None:
+        callbacks.append(nn.train.callbacks.model_checkpoint('checkpoints', ckpt_interval))
+
+    # set Id
+    train_id = 0 if proc_index is None else proc_index
+
+    # resume checkpoint
+    steps_done = 0
+    optimizer_state_dict = None
+    resume = args.pop('resume')
+    if resume is not None:
+        if proc_index is None and os.path.isfile(resume):
+            checkpoint = torch.load(resume)
+            model.load_state_dict(checkpoint['model_state_dict'])
+            args['num_episodes'] = checkpoint['episodes_left']
+            optimizer_state_dict = checkpoint['optimizer_state_dict']
+            steps_done = checkpoint['steps_done']
+            print(f'loaded from ckpt: episodes left {checkpoint["episodes_left"]}')
+        if proc_index is not None and os.path.isdir(resume):
+            checkpoints = _find_ckpts(resume)
+            if proc_index == 0:
+                model.load_state_dict(checkpoints[proc_index]['model_state_dict'])
+            optimizer_state_dict = checkpoint['optimizer_state_dict']
+            args['num_episodes'] = checkpoints[proc_index]['episodes_left']
+            steps_done = checkpoints[proc_index]['steps_done']
+            print(f'worker {proc_index} episodes left: {checkpoints[proc_index]["episodes_left"]}')
 
     # define memory
     memory = nn.train.RandomReplayMemory(args.pop('memory_size'))
@@ -37,9 +64,15 @@ def _create_and_train(proc_index, device, model, args):
     nn.train.train_dqn(model,
                        env,
                        memory=memory,
-                       action_policy=nn.train.epsilon_greedy_choose(args.pop('eps_start'), args.pop('eps_end'), args.pop('eps_decay')),  # noqa
+                       action_policy=nn.train.epsilon_greedy_choose(
+                           args.pop('eps_start'),
+                           args.pop('eps_end'),
+                           args.pop('eps_decay'),
+                           initial_step=steps_done),
                        device=device,
                        callbacks=callbacks,
+                       train_id=train_id,
+                       optimizer_state_dict=optimizer_state_dict,
                        **args)
 
     # save
@@ -76,18 +109,16 @@ def main():
                         help='decay of eps probabilities')
     parser.add_argument('--target_update', type=int, default=15,
                         help='number of episodes between each target dqn update')
-    parser.add_argument('--save_interval', type=int, default=30,
-                        help='number of episodes between each network checkpoint')
     parser.add_argument('--save_path', type=str, default='model.pt',
                         help='where save trained model')
     parser.add_argument('--memory_size', type=int, default=100000,
                         help='size of replay memory')
     parser.add_argument('--num_episodes', type=int, default=4000,
                         help='number of games to be played before end')
-    parser.add_argument('--load', type=str, default=None,
-                        help='load a saved state_dict')
-    parser.add_argument('--finally_show', action='store_true',
-                        help='finally show a play')
+    parser.add_argument('--resume', type=str, default=None,
+                        help='load from a checkpoint')
+    parser.add_argument('--checkpoint', type=int, default=None,
+                        help='number of episodes between each network checkpoint')
     parser.add_argument('--random', action='store_true',
                         help='choose randomly different worlds and stages')
     parser.add_argument('--render', action='store_true',
@@ -103,17 +134,26 @@ def main():
         args['random'] = False
 
     # log params
-    show = args.pop('finally_show')
     workers = args.pop('workers')
-    print('training parameters:')
-    for k, v in args.items():
-        print('{:15} {}'.format(k, v))
-    with open('parameters.log', 'w') as params_log:
+    if args['resume'] is None:
+        print('training parameters:')
         for k, v in args.items():
-            params_log.write('{:15} {}\n'.format(k, v))
+            print('{:15} {}'.format(k, v))
+        with open('parameters.log', 'w') as params_log:
+            for k, v in args.items():
+                params_log.write('{:15} {}\n'.format(k, v))
+
+    # resume checks
+    if args['resume'] is not None and os.path.isfile(args['resume']) and not workers == 1:
+        print(f'[Error] cannot resume a checkpoint with {workers} workers')
+        return
+    if args['resume'] is not None and os.path.isdir(args['resume']) and workers != len(_find_ckpts(args['resume'])):
+        print(f'[Error] cannot resume checkpoints with {workers} workers')
+        return
 
     # create environment, DQN and start training
-    model = nn.create([4, 30, 56], len(SIMPLE_ACTIONS), load_state_from=args.pop('load'), for_train=True)
+    model = nn.create([4, 30, 56], len(SIMPLE_ACTIONS), for_train=True)
+
     if workers == 1:
         _create_and_train(None, _device, model, args)
     elif workers > 1:
@@ -125,8 +165,3 @@ def main():
         mp.spawn(_create_and_train, args=(_device, model, args), nprocs=workers, join=True)
     else:
         print('[Error] workers >= 1')
-
-    # show
-    if show:
-        model.eval()
-        show_game(model.to('cpu'))
