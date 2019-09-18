@@ -56,6 +56,12 @@ def _create_and_train(proc_index, model, args):
             steps_done = checkpoints[proc_index]['steps_done']
             choosen_actions = checkpoint[proc_index]['actions']
 
+    # define environment
+    env = MarioEnvironment(choosen_actions, 4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56),
+                           random=args.pop('random'),
+                           render=args.pop('render'),
+                           world_stage=args.pop('world_stage'))
+
     # define callbacks
     save_path = args.pop('save_path')
     callbacks = [
@@ -67,12 +73,9 @@ def _create_and_train(proc_index, model, args):
         callbacks.append(nn.train.callbacks.model_checkpoint('checkpoints', ckpt_interval, meta={
             'actions': choosen_actions
         }, start_episode=start_episode))
-
-    # define environment
-    env = MarioEnvironment(choosen_actions, 4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56),
-                           random=args.pop('random'),
-                           render=args.pop('render'),
-                           world_stage=args.pop('world_stage'))
+    test = args.pop('test')
+    if test is not None and (proc_index == 0 or proc_index is None):
+        callbacks.append(nn.train.callbacks.test_model(env, 'episodes_test.csv', test))
 
     # define memory
     memory = nn.train.RandomReplayMemory(args.pop('memory_size'))
@@ -147,6 +150,8 @@ def main():
                         help='select specific world and stage')
     parser.add_argument('--actions', type=str, default='simple',
                         help='select actions used between simple | ..')
+    parser.add_argument('--test', type=int, default=None,
+                        help='each `test` episodes network is used and tested over an episode')
 
     args = vars(parser.parse_args())
 

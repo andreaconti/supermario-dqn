@@ -5,6 +5,7 @@ Callbacks coroutines used by training functions
 import os
 import time
 import torch
+from supermario_dqn.nn.model import best_action
 
 
 __ALL__ = ['console_logger', 'log_episodes', 'save_model', 'model_checkpoint']
@@ -115,3 +116,49 @@ def model_checkpoint(path_dir: str, interval: int, meta: dict = None, start_epis
             return counter
 
     return model_checkpoint_
+
+
+def test_model(env, save_path, interval, start_episode=0):
+    """
+    Play a test game and save results
+    """
+
+    def convert_tensor(vector):
+        if type(vector) is torch.Tensor:
+            return vector
+        else:
+            return torch.tensor(vector)
+
+    def test_model_(mode, state, info):
+        if mode == 'init':
+            if os.path.isfile(save_path):
+                f = open(save_path, 'a')
+            else:
+                f = open(save_path, 'a')
+                f.write('episode,reward\n')
+            counter = 0
+            return f, counter
+
+        if mode == 'run':
+            f, counter = state
+            counter += 1
+            if counter % interval == 0:
+                model = info['model']
+                reward = 0
+                with torch.no_grad():
+                    obs = env.reset()
+                    done = False
+                    while not done:
+                        obs, r, done, _ = env.step(
+                                best_action(model, convert_tensor(obs).to(info['device']).unsqueeze(0))
+                        )
+                        reward += r
+
+                f.write('{},{}\n'.format(info['episode'] + start_episode, reward))
+            return f, counter
+
+        if mode == 'close':
+            f, _ = state
+            f.close()
+
+    return test_model_

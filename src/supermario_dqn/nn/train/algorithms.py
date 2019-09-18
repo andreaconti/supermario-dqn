@@ -116,6 +116,7 @@ def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(
                 'reward': episode_reward,
                 'steps': steps_done,
                 'total_steps': total_steps,
+                'device': device,
             })
             callbacks_[callback] = new_state
 
