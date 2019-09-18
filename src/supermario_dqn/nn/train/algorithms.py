@@ -15,7 +15,7 @@ import torch.nn.functional as F
 __ALL__ = ['train_dqn']
 
 
-def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(200000),
+def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(200000), target_net=None,
               action_policy=epsilon_greedy_choose(0.9, 0.05, 200), batch_size=128, fit_interval=32,
               gamma=0.98, target_update=15, optimizer_f=optim.Adam, optimizer_state_dict=None, num_episodes=50,
               device='cpu', train_id=0, callbacks=[]):
@@ -36,8 +36,9 @@ def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(
     policy_net.to(device)
 
     # compute target net and instances
-    target_net = DQN(policy_net._channels, policy_net._height, policy_net._width, policy_net._outputs)
-    target_net.load_state_dict(policy_net.state_dict())
+    if target_net is None:
+        target_net = DQN(policy_net._channels, policy_net._height, policy_net._width, policy_net._outputs)
+        target_net.load_state_dict(policy_net.state_dict())
     target_net.to(device)
     target_net.eval()
 

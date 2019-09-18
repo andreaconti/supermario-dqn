@@ -25,7 +25,7 @@ def _find_ckpts(path):
             and os.path.isfile(os.path.join(path, f))]
 
 
-def _create_and_train(proc_index, device, model, args):
+def _create_and_train(proc_index, device, model, target_net, args):
 
     # handle actions
     choosen_actions = _actions
@@ -89,6 +89,7 @@ def _create_and_train(proc_index, device, model, args):
                            args.pop('eps_decay'),
                            initial_step=steps_done),
                        device=device,
+                       target_net=target_net,
                        callbacks=callbacks,
                        train_id=train_id,
                        optimizer_state_dict=optimizer_state_dict,
@@ -195,15 +196,17 @@ def main():
 
     # create environment, DQN and start training
     model = nn.create([4, 30, 56], len(_actions), for_train=True)
+    target_net = nn.create([4, 30, 56], len(_actions), for_train=False)
 
     if workers == 1:
-        _create_and_train(None, device, model, args)
+        _create_and_train(None, device, model, target_net, args)
     elif workers > 1:
         model.share_memory()
+        target_net.share_memory()
 
         args['num_episodes'] = args['num_episodes'] // workers
         args['memory_size'] = args['memory_size'] // workers
 
-        mp.spawn(_create_and_train, args=(device, model, args), nprocs=workers, join=True)
+        mp.spawn(_create_and_train, args=(device, model, target_net, args), nprocs=workers, join=True)
     else:
         print('[Error] workers >= 1')
