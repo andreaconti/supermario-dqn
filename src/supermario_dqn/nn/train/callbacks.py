@@ -105,7 +105,7 @@ def model_checkpoint(path_dir: str, interval: int, meta: dict = None, start_epis
                 tosave = {
                     'model_state_dict': info['model'].state_dict(),
                     'optimizer_state_dict': info['optimizer'].state_dict(),
-                    'episode': info['episode'],
+                    'episode': start_episode + info['episode'],
                     'steps_done': info['total_steps']
                 }
                 if meta is not None:
