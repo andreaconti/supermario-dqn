@@ -10,18 +10,22 @@ import torch
 __ALL__ = ['console_logger', 'log_episodes', 'save_model', 'model_checkpoint']
 
 
-def console_logger(mode, _, info):
-    if mode == 'init':
-        print('start training')
+def console_logger(start_episode=0):
 
-    if mode == 'run':
-        print(f'episode {info["episode"]}/{info["episodes"]} ({info["steps"]}) | reward: {info["reward"]}')
+    def console_logger_(mode, _, info):
+        if mode == 'init':
+            print('start training')
 
-    if mode == 'close':
-        print('end training.')
+        if mode == 'run':
+            print(f'episode {start_episode+info["episode"]}/{start_episode+info["episodes"]} ({info["steps"]}) | reward: {info["reward"]}')  # noqa
+
+        if mode == 'close':
+            print('end training.')
+
+    return console_logger_
 
 
-def log_episodes(path_or_file, close=True):
+def log_episodes(path_or_file, close=True, start_episode=0):
     """
     Returns a callback that saves a log of episodes
     """
@@ -39,7 +43,12 @@ def log_episodes(path_or_file, close=True):
             return f
 
         elif mode == 'run':
-            f.write('{},{},{},{}\n'.format(int(time.time()), info['episode'], info['reward'], info['steps']))
+            f.write('{},{},{},{}\n'.format(
+                int(time.time()),
+                start_episode + info['episode'],
+                info['reward'],
+                info['steps']
+            ))
             return f
 
         elif mode == 'close' and close:
@@ -70,10 +79,13 @@ def save_model(path: str, interval: int, verbose: bool = False):
     return save_model_
 
 
-def model_checkpoint(path_dir: str, interval: int):
+def model_checkpoint(path_dir: str, interval: int, meta: dict = None, start_episode=0):
     """
     Returns a callback that checkpoints the model
     """
+
+    if not type(meta) is dict:
+        raise ValueError('meta is None or a dict')
 
     def model_checkpoint_(mode, counter, info):
         if mode == 'init':
@@ -86,15 +98,20 @@ def model_checkpoint(path_dir: str, interval: int):
             if counter % interval == 0:
                 train_id = info['train_id']
                 curr_episode = info['episode']
-                ckpt_dir = os.path.join(path_dir, 'ckpt_at_' + str(curr_episode))
+                ckpt_dir = os.path.join(path_dir, 'ckpt_at_' + str(start_episode + curr_episode))
                 if not os.path.isdir(ckpt_dir):
                     os.mkdir(ckpt_dir)
-                torch.save({
+
+                tosave = {
                     'model_state_dict': info['model'].state_dict(),
                     'optimizer_state_dict': info['optimizer'].state_dict(),
-                    'episodes_left': info['episodes'] - info['episode'],
+                    'episode': info['episode'],
                     'steps_done': info['total_steps']
-                }, os.path.join(ckpt_dir, f'ckpt_{train_id}.ckpt'))
+                }
+                if meta is not None:
+                    for k, v in meta.items():
+                        tosave[k] = v
+                torch.save(tosave, os.path.join(ckpt_dir, f'ckpt_{train_id}.ckpt'))
             return counter
 
     return model_checkpoint_
