@@ -12,7 +12,6 @@ import argparse
 
 # Utils functions and variables
 
-_device = torch.device('cpu')
 _actions = SIMPLE_ACTIONS
 _actions_map = {
     'simple': SIMPLE_ACTIONS,
@@ -26,7 +25,7 @@ def _find_ckpts(path):
             and os.path.isfile(os.path.join(path, f))]
 
 
-def _create_and_train(proc_index, model, args):
+def _create_and_train(proc_index, device, model, args):
 
     # handle actions
     choosen_actions = _actions
@@ -89,7 +88,7 @@ def _create_and_train(proc_index, model, args):
                            args.pop('eps_end'),
                            args.pop('eps_decay'),
                            initial_step=steps_done),
-                       device=_device,
+                       device=device,
                        callbacks=callbacks,
                        train_id=train_id,
                        optimizer_state_dict=optimizer_state_dict,
@@ -110,8 +109,9 @@ def main():
     """
 
     if torch.cuda.is_available():
-        _device = torch.device('cuda')  # noqa
+        device = torch.device('cuda')  # noqa
     else:
+        device = torch.device('cpu')
         print('[Warning] using CPU for training')
 
     # parse arguments
@@ -197,13 +197,13 @@ def main():
     model = nn.create([4, 30, 56], len(_actions), for_train=True)
 
     if workers == 1:
-        _create_and_train(None, model, args)
+        _create_and_train(None, device, model, args)
     elif workers > 1:
         model.share_memory()
 
         args['num_episodes'] = args['num_episodes'] // workers
         args['memory_size'] = args['memory_size'] // workers
 
-        mp.spawn(_create_and_train, args=(model, args), nprocs=workers, join=True)
+        mp.spawn(_create_and_train, args=(device, model, args), nprocs=workers, join=True)
     else:
         print('[Error] workers >= 1')
