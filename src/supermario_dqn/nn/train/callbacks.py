@@ -153,6 +153,7 @@ def test_model(env, save_path, interval, start_episode=0, insert_head=True):
                 model = info['model']
                 reward = 0
                 with torch.no_grad():
+                    model.train(False)
                     obs = env.reset()
                     done = False
                     while not done:
@@ -160,6 +161,7 @@ def test_model(env, save_path, interval, start_episode=0, insert_head=True):
                                 best_action(model, convert_tensor(obs).to(info['device']).unsqueeze(0))
                         )
                         reward += r
+                    model.train(True)
 
                 f.write('{},{}\n'.format(info['episode'] + start_episode, reward))
                 f.flush()
