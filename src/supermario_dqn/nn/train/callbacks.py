@@ -91,7 +91,10 @@ def model_checkpoint(path_dir: str, interval: int, meta: dict = None, start_epis
     def model_checkpoint_(mode, counter, info):
         if mode == 'init':
             if not os.path.isdir(path_dir):
-                os.mkdir(path_dir)
+                try:
+                    os.mkdir(path_dir)
+                except FileExistsError:
+                    pass
             return 0
 
         if mode == 'run':
