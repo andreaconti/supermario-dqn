@@ -210,6 +210,9 @@ def main():
 
         args['num_episodes'] = args['num_episodes'] // workers
         args['memory_size'] = args['memory_size'] // workers
+        args['test'] = args['test'] // workers
+        if args['test'] == 0:
+            args['test'] = 1
 
         mp.spawn(_create_and_train, args=(device, model, target_net, args), nprocs=workers, join=True)
     else:
