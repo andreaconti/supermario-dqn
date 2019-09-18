@@ -6,5 +6,6 @@ numpy
 pillow
 scipy
 torch
+pandas
 torchvision
 argparse
