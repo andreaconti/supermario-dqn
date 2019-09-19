@@ -61,16 +61,11 @@ def _create_and_train(proc_index, device, model, target_net, args):
                            render=args.pop('render'),
                            world_stage=args.pop('world_stage'))
 
-    # create log files
-    with open('episodes.csv', 'w') as episode_file:
-        episode_file.write('time,episode,reward,steps\n')
-
     # define callbacks
-    save_path = args.pop('save_path')
-    callbacks = [
-        nn.train.callbacks.console_logger(start_episode=start_episode),
-        nn.train.callbacks.log_episodes('episodes.csv', start_episode=start_episode, insert_head=False)
-    ]
+    callbacks = [nn.train.callbacks.console_logger(start_episode=start_episode)]
+    log = args.pop('log')
+    if log:
+        nn.train.callbacks.log_episodes('episodes.csv', start_episode=start_episode)
     ckpt_interval = args.pop('checkpoint')
     if ckpt_interval is not None:
         callbacks.append(nn.train.callbacks.model_checkpoint('checkpoints', ckpt_interval, meta={
@@ -84,6 +79,7 @@ def _create_and_train(proc_index, device, model, target_net, args):
     memory = nn.train.RandomReplayMemory(args.pop('memory_size'))
 
     # train
+    save_path = args.pop('save_path')
     nn.train.train_dqn(model,
                        env,
                        memory=memory,
@@ -154,9 +150,11 @@ def main():
     parser.add_argument('--world_stage', type=int, nargs=2, default=None,
                         help='select specific world and stage')
     parser.add_argument('--actions', type=str, default='simple',
-                        help='select actions used between simple | ..')
+                        help='select actions used between ["simple"]')
     parser.add_argument('--test', type=int, default=None,
-                        help='each `test` episodes network is used and tested over an episode')
+                        help='each `test` episodes network is used and tested over an episode, INCONSISTENT with multiple workers')   # noqa
+    parser.add_argument('--log', action='store_true',
+                        help='logs episodes results, INCONSISTENT with multiple workers')
 
     args = vars(parser.parse_args())
 
