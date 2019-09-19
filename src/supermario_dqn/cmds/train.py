@@ -53,7 +53,7 @@ def _create_and_train(proc_index, device, model, target_net, args):
             optimizer_state_dict = checkpoints[proc_index]['optimizer_state_dict']
             start_episode = checkpoints[proc_index]['episode']
             steps_done = checkpoints[proc_index]['steps_done']
-            choosen_actions = checkpoint[proc_index]['actions']
+            choosen_actions = checkpoints[proc_index]['actions']
 
     # define environment
     env = MarioEnvironment(choosen_actions, 4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56),
