@@ -50,8 +50,8 @@ def _create_and_train(proc_index, device, model, target_net, args):
             checkpoints = _find_ckpts(resume)
             if proc_index == 0:
                 model.load_state_dict(checkpoints[proc_index]['model_state_dict'])
-            optimizer_state_dict = checkpoint['optimizer_state_dict']
-            start_episode = checkpoint['episode']
+            optimizer_state_dict = checkpoints[proc_index]['optimizer_state_dict']
+            start_episode = checkpoints[proc_index]['episode']
             steps_done = checkpoints[proc_index]['steps_done']
             choosen_actions = checkpoint[proc_index]['actions']
 
