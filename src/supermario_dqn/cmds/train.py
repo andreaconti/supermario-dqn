@@ -65,7 +65,7 @@ def _create_and_train(proc_index, device, model, target_net, args):
     callbacks = [nn.train.callbacks.console_logger(start_episode=start_episode)]
     log = args.pop('log')
     if log:
-        nn.train.callbacks.log_episodes('episodes.csv', start_episode=start_episode)
+        callbacks.append(nn.train.callbacks.log_episodes('episodes.csv', start_episode=start_episode))
     ckpt_interval = args.pop('checkpoint')
     if ckpt_interval is not None:
         callbacks.append(nn.train.callbacks.model_checkpoint('checkpoints', ckpt_interval, meta={

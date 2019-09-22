@@ -81,6 +81,7 @@ def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(
         optimizer.step()
 
     # training loop
+    policy_net.train(False)
     for i_episode in range(num_episodes):
         curr_episode = i_episode + 1
         steps_done = 0
@@ -104,7 +105,14 @@ def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(
 
             # Perform one step of the optimization (on the target network)
             if steps_done % fit_interval == 0:
+                policy_net.train(True)
                 optimize_model()
+                policy_net.train(False)
+
+            # copy to target
+            if steps_done % target_update == 0:
+                target_net.load_state_dict(policy_net.state_dict())
+                target_net.eval()
 
         # call callbacks
         for callback, args in callbacks_.items():
