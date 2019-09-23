@@ -17,16 +17,17 @@ $ source .venv/bin/activate
 $ pip3 install -r requirements
 
 # use
-$ supermario_train --help
+$ supermario_train -h
 usage: supermario_train [-h] [--batch_size BATCH_SIZE]
                         [--fit_interval FIT_INTERVAL] [--gamma GAMMA]
                         [--eps_start EPS_START] [--eps_end EPS_END]
+                        [--eps_decay EPS_DECAY]
                         [--target_update TARGET_UPDATE]
-                        [--save_interval SAVE_INTERVAL]
                         [--save_path SAVE_PATH] [--memory_size MEMORY_SIZE]
-                        [--num_episodes NUM_EPISODES] [--verbose VERBOSE]
-                        [--load LOAD] [--log_file_dir LOG_FILE_DIR]
-                        [--finally_show]
+                        [--num_episodes NUM_EPISODES] [--resume RESUME]
+                        [--checkpoint CHECKPOINT] [--random] [--render]
+                        [--world_stage WORLD_STAGE WORLD_STAGE]
+                        [--actions ACTIONS] [--test TEST] [--log]
 
 Handle training
 
@@ -40,26 +41,33 @@ optional arguments:
   --eps_start EPS_START
                         start probability to choose a random action
   --eps_end EPS_END     end probability to choose a random action
+  --eps_decay EPS_DECAY
+                        decay of eps probabilities
   --target_update TARGET_UPDATE
                         number of episodes between each target dqn update
-  --save_interval SAVE_INTERVAL
-                        number of episodes between each network checkpoint
   --save_path SAVE_PATH
                         where save trained model
   --memory_size MEMORY_SIZE
                         size of replay memory
   --num_episodes NUM_EPISODES
                         number of games to be played before end
-  --verbose VERBOSE     verbosity of output
-  --load LOAD           load a saved state_dict
-  --log_file_dir LOG_FILE_DIR
-                        file path where write logs
-  --finally_show        finally show a play
+  --resume RESUME       load from a checkpoint
+  --checkpoint CHECKPOINT
+                        number of episodes between each network checkpoint
+  --random              choose randomly different worlds and stages
+  --render              rendering of frames, only for debug
+  --world_stage WORLD_STAGE WORLD_STAGE
+                        select specific world and stage
+  --actions ACTIONS     select actions used between ["simple"]
+  --test TEST           each `test` episodes network is used and tested over
+                        an episode
+  --log                 logs episodes results
 
-# and finally
-
-$ supermario_play --help
-usage: play a game [-h] [--world_stage WORLD_STAGE WORLD_STAGE] model
+# play
+$ supermario_play -h
+usage: play a game [-h] [--world_stage WORLD_STAGE WORLD_STAGE] [--skip SKIP]
+                   [--processed]
+                   model
 
 positional arguments:
   model                 neural network model
@@ -69,13 +77,16 @@ optional arguments:
   --world_stage WORLD_STAGE WORLD_STAGE
                         select a specific world and stage, world in [1..8],
                         stage in [1..4]
-
+  --skip SKIP           number of frames to skip
+  --processed           shows frames processed for neural network
 ~~~
-
 
 ### Results
 
-For now I have only performed the training for the first stage of level 1 with the following results
-(about 3 hours and 2000 episodes)
+~~~bash
+$ supermario_play --skip 5 --world_stage 1 1 trained/train_1_1/model.pt
+~~~
 
-![](trained/train1/rewards_over_steps.png)
+| rewards | play gif |
+|---------|----------|
+|![](trained/train_1_1/rewards_over_steps.png)| ![](trained/train_1_1/play_gif.png)|
