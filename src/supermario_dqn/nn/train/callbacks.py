@@ -102,12 +102,7 @@ def model_checkpoint(path_dir: str, interval: int, meta: dict = None, start_epis
         if mode == 'run':
             counter = counter + 1
             if counter % interval == 0:
-                train_id = info['train_id']
                 curr_episode = info['episode']
-                ckpt_dir = os.path.join(path_dir, 'ckpt_at_' + str(start_episode + curr_episode))
-                if not os.path.isdir(ckpt_dir):
-                    os.mkdir(ckpt_dir)
-
                 tosave = {
                     'model_state_dict': info['model'].state_dict(),
                     'optimizer_state_dict': info['optimizer'].state_dict(),
@@ -117,7 +112,7 @@ def model_checkpoint(path_dir: str, interval: int, meta: dict = None, start_epis
                 if meta is not None:
                     for k, v in meta.items():
                         tosave[k] = v
-                torch.save(tosave, os.path.join(ckpt_dir, f'ckpt_{train_id}.ckpt'))
+                torch.save(tosave, os.path.join(path_dir, f'ckpt_at_{curr_episode}.ckpt'))
             return counter
 
     return model_checkpoint_

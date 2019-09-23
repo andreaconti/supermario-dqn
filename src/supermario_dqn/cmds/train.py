@@ -3,7 +3,6 @@ Handles supermario training
 """
 
 import torch
-import torch.multiprocessing as mp
 import os
 from supermario_dqn.env import MarioEnvironment, SIMPLE_ACTIONS
 import supermario_dqn.nn as nn
@@ -18,14 +17,7 @@ _actions_map = {
 }
 
 
-def _find_ckpts(path):
-    return [torch.load(os.path.join(path, f))
-            for f in os.listdir(path)
-            if f.endswith('.ckpt')
-            and os.path.isfile(os.path.join(path, f))]
-
-
-def _create_and_train(proc_index, device, model, target_net, args):
+def _create_and_train(proc_index, device, model, args):
 
     # handle actions
     choosen_actions = _actions
@@ -39,21 +31,12 @@ def _create_and_train(proc_index, device, model, target_net, args):
     optimizer_state_dict = None
     resume = args.pop('resume')
     if resume is not None:
-        if proc_index is None and os.path.isfile(resume):
-            checkpoint = torch.load(resume)
-            model.load_state_dict(checkpoint['model_state_dict'])
-            start_episode = checkpoint['episode']
-            optimizer_state_dict = checkpoint['optimizer_state_dict']
-            steps_done = checkpoint['steps_done']
-            choosen_actions = checkpoint['actions']
-        if proc_index is not None and os.path.isdir(resume):
-            checkpoints = _find_ckpts(resume)
-            if proc_index == 0:
-                model.load_state_dict(checkpoints[proc_index]['model_state_dict'])
-            optimizer_state_dict = checkpoints[proc_index]['optimizer_state_dict']
-            start_episode = checkpoints[proc_index]['episode']
-            steps_done = checkpoints[proc_index]['steps_done']
-            choosen_actions = checkpoints[proc_index]['actions']
+        checkpoint = torch.load(resume)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        start_episode = checkpoint['episode']
+        optimizer_state_dict = checkpoint['optimizer_state_dict']
+        steps_done = checkpoint['steps_done']
+        choosen_actions = checkpoint['actions']
 
     # define environment
     env = MarioEnvironment(choosen_actions, 4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56),
@@ -89,7 +72,6 @@ def _create_and_train(proc_index, device, model, target_net, args):
                            args.pop('eps_decay'),
                            initial_step=steps_done),
                        device=device,
-                       target_net=target_net,
                        callbacks=callbacks,
                        train_id=train_id,
                        optimizer_state_dict=optimizer_state_dict,
@@ -145,23 +127,20 @@ def main():
                         help='choose randomly different worlds and stages')
     parser.add_argument('--render', action='store_true',
                         help='rendering of frames, only for debug')
-    parser.add_argument('--workers', type=int, default=1,
-                        help='multiprocessing enable')
     parser.add_argument('--world_stage', type=int, nargs=2, default=None,
                         help='select specific world and stage')
     parser.add_argument('--actions', type=str, default='simple',
                         help='select actions used between ["simple"]')
     parser.add_argument('--test', type=int, default=None,
-                        help='each `test` episodes network is used and tested over an episode, INCONSISTENT with multiple workers')   # noqa
+                        help='each `test` episodes network is used and tested over an episode')
     parser.add_argument('--log', action='store_true',
-                        help='logs episodes results, INCONSISTENT with multiple workers')
+                        help='logs episodes results')
 
     args = vars(parser.parse_args())
 
     # handle world stage
     if args['world_stage'] is not None:
         args['random'] = False
-    workers = args.pop('workers')
 
     # handle choosen actions
     actions_type = args.pop('actions')
@@ -182,30 +161,10 @@ def main():
                 params_log.write('{:15} {}\n'.format(k, v))
 
     # resume checks
-    if args['resume'] is not None and os.path.isfile(args['resume']) and workers != 1:
-        print(f'[Error] cannot resume a checkpoint with {workers} workers')
+    if args['resume'] is not None and not os.path.isfile(args['resume']):
+        print(f'[Error] resume from a .ckpt file')
         return
-
-    if args['resume'] is not None and os.path.isdir(args['resume']) and workers == 1:
-        print(f'[Error] single worker, pass the file .ckpt')
-        return
-
-    if args['resume'] is not None and os.path.isdir(args['resume']):
-        num_ckpts = len(_find_ckpts(args['resume']))
-        if workers != num_ckpts:
-            print(f'[Error] cannot resume {num_ckpts} checkpoints with {workers} workers')
-            return
 
     # create environment, DQN and start training
     model = nn.create([4, 30, 56], len(_actions), for_train=True)
-    target_net = nn.create([4, 30, 56], len(_actions), for_train=False)
-
-    if workers == 1:
-        _create_and_train(None, device, model, target_net, args)
-    elif workers > 1:
-        model.share_memory()
-        target_net.share_memory()
-
-        mp.spawn(_create_and_train, args=(device, model, target_net, args), nprocs=workers, join=True)
-    else:
-        print('[Error] workers >= 1')
+    _create_and_train(None, device, model, args)

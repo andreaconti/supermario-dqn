@@ -2,7 +2,7 @@
 Tests for callbacks module
 """
 
-from supermario_dqn.nn.callbacks import log_episodes
+from supermario_dqn.nn.train.callbacks import log_episodes
 import os
 
 
