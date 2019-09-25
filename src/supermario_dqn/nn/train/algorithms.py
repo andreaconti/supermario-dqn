@@ -124,13 +124,11 @@ def train_dqn(policy_net: torch.nn.Module, target_net: torch.nn.Module, env: Mar
                 policy_net.train(True)
                 optimize_model()
                 policy_net.train(False)
-                print('train')
 
         # copy to target
         if i_episode % target_update == 0:
             target_net.load_state_dict(policy_net.state_dict())
             target_net.eval()
-            print('update target')
 
         # call callbacks
         for callback, args in callbacks_.items():
