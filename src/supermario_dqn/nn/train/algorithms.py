@@ -121,9 +121,7 @@ def train_dqn(policy_net: torch.nn.Module, target_net: torch.nn.Module, env: Mar
 
             # Perform one step of the optimization (on the target network)
             if steps_done % fit_interval == 0:
-                policy_net.train(True)
                 optimize_model()
-                policy_net.train(False)
 
         # copy to target
         if i_episode % target_update == 0:

@@ -26,8 +26,9 @@ def main(model=None, world_stage=None, skip=1):
 
         env = MarioEnvironment(SIMPLE_ACTIONS,
                                4, lambda w, s, t: preprocess(w, s, t, 30, 56), world_stage=args['world_stage'])
-        model = nn.create([4, 30, 56], len(SIMPLE_ACTIONS), load_state_from=args['model'])
+        model = nn.create([4, 30, 56], len(SIMPLE_ACTIONS), load_state_from=args['model'], for_train=False)
         model.requires_grad_(False)
+        model.eval()
 
         skip_ = args['skip']
         show_processed = args['processed']
@@ -45,7 +46,7 @@ def main(model=None, world_stage=None, skip=1):
         plt.clf()
         step += 1
 
-        action = nn.best_action(model, pr_state.unsqueeze(0))
+        action = nn.best_action(model, pr_state)
         [pr_state, or_states], r, done, _ = env.step(action, original=True)
         reward += r
 
