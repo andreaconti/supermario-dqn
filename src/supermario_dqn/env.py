@@ -21,11 +21,22 @@ SIMPLE_ACTIONS = [['right'], ['right', 'A', 'B'], ['right', 'A'], ['left']]
 
 class MarioEnvironment():
     """
-    Provides environment for SuperMario Bros
+    Provides a custom OpenAI Gym like environment for SuperMario Bros.
     """
 
     def __init__(self, actions, n_frames: int, preprocess: Callable, random=False, world_stage: (int, int) = None,
                  render: bool = False):
+        """
+        init environment
+
+        Args:
+            actions: a list of actions, for instance SIMPLE_ACTIONS contained in this module.
+            n_frames: number of frames in ouput as channels.
+            preprocess: a function to preprocess frames.
+            random: reset with a random world, stage pair.
+            world_stage: use a specific world, stage pair.
+            render: render frames during steps.
+        """
 
         self._render = render
 
@@ -58,14 +69,23 @@ class MarioEnvironment():
 
     @property
     def actions(self):
+        """
+        List of actions enabled.
+        """
         return self._actions
 
     @property
     def curr_world(self):
+        """
+        World currently provided.
+        """
         return self._world
 
     @property
     def curr_stage(self):
+        """
+        Stage currently provided.
+        """
         return self._stage
 
     def reset(self, original=False):

@@ -17,13 +17,10 @@ _actions_map = {
 }
 
 
-def _create_and_train(proc_index, device, model, args):
+def _create_and_train(proc_index, device, model, target_net, args):
 
     # handle actions
     choosen_actions = _actions
-
-    # set Id
-    train_id = 0 if proc_index is None else proc_index
 
     # resume checkpoint
     steps_done = 0
@@ -64,6 +61,7 @@ def _create_and_train(proc_index, device, model, args):
     # train
     save_path = args.pop('save_path')
     nn.train.train_dqn(model,
+                       target_net,
                        env,
                        memory=memory,
                        action_policy=nn.train.epsilon_greedy_choose(
@@ -73,7 +71,6 @@ def _create_and_train(proc_index, device, model, args):
                            initial_step=steps_done),
                        device=device,
                        callbacks=callbacks,
-                       train_id=train_id,
                        optimizer_state_dict=optimizer_state_dict,
                        **args)
 
@@ -166,5 +163,6 @@ def main():
         return
 
     # create environment, DQN and start training
-    model = nn.create([4, 30, 56], len(_actions), for_train=True)
-    _create_and_train(None, device, model, args)
+    policy_net = nn.create([4, 30, 56], len(_actions), for_train=True)
+    target_net = nn.create([4, 30, 56], len(_actions), for_train=False)
+    _create_and_train(None, device, policy_net, target_net, args)

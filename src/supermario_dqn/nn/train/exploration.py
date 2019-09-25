@@ -1,5 +1,5 @@
 """
-This module defines many exploration policies
+Provides exploration policy functions
 """
 
 import random
@@ -10,6 +10,20 @@ __ALL__ = ['epsilon_greedy_choose']
 
 
 def epsilon_greedy_choose(eps_start, eps_end, eps_decay, initial_step=0):
+    """
+    The action is selected randomly with probability 'eps' otherwise is choosen using the neural network.
+    eps decreases using an exponential law until eps_end.
+
+    Args:
+        eps_start: initial value of eps.
+        eps_end: end value of eps.
+        eps_decay: how much eps decay.
+        initial_step: the initial step to be used, useful to restore a training.
+
+    Returns:
+        A Callables with as inputs the number of actions, the model and the state on which
+        choose action. This callable returns a integer, the choosen action.
+    """
 
     total_step = initial_step
 

@@ -10,10 +10,20 @@ import typing
 
 class DQN(nn.Module):
     """
-    class of the used Q-value Neural Network
+    DQN Pytorch neural network.
     """
 
     def __init__(self, channels: int, height: int, width: int, outputs: int):
+        """
+        Initializes DQN network
+
+        Args:
+            channels: number of channels of the input image
+            height: height of the input image
+            width: width of the input image
+            outputs: number of actions in output from the DQN model
+        """
+
         super(DQN, self).__init__()
 
         # parameters
@@ -56,7 +66,20 @@ class DQN(nn.Module):
 def create(size: typing.List[int], outputs: int,
            load_state_from: str = None, for_train=False) -> DQN:
     """
-    create model
+    creates a DQN neural network.
+
+    Is possible to load from a file the state_dict or create a new
+    network.
+
+    Args:
+        size: a sequence of 3 integers representing the input shape of the network,
+           for instance [4, 30, 56] if the input is a tensor of shape 4x30x56
+        outputs: integer, the number of outputs of the network
+        load_state_from: path of a file containing a pytorch `state_dict`
+        for_train: false by default, setup network for training or not
+
+    Returns:
+        A `DQN` class instance
     """
     if len(size) != 3 or size[0] < 0 or size[1] < 0 or size[2] < 0:
         raise ValueError(f'size must be positive: [channels, height, width]')
@@ -77,6 +100,15 @@ def create(size: typing.List[int], outputs: int,
 
 def best_action(model: DQN, state: torch.Tensor) -> int:
     """
-    provides best action for given state
+    provides best action for given state.
+
+    Args:
+        model: a DQN class instance, or a Callable that returns
+            a `torch.Tensor` of shape [1, n_actions].
+        state: tensor used as input for the model with an added
+            axis at index 0
+
+    Returns:
+        index of the action with the best score
     """
-    return model(state).max(1)[1].view(1, 1).item()
+    return model(state.unsqueeze(0)).max(1)[1].view(1, 1).item()

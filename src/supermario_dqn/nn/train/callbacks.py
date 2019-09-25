@@ -1,5 +1,9 @@
 """
-Callbacks coroutines used by training functions
+Callbacks used by training functions.
+
+Each callback is called with a `mode`, some arguments a info dictionary containing current episode
+info. What is returned by the callback is passed in the next call as argument. `mode` can be 'init'
+for the initialization phase, 'run' at the end of episodes and 'close' when the training is ended.
 """
 
 import os
@@ -12,6 +16,15 @@ __ALL__ = ['console_logger', 'log_episodes', 'save_model', 'model_checkpoint']
 
 
 def console_logger(start_episode=0):
+    """
+    Provides a callback for stdout logging
+
+    Args:
+        start_episode: the number of episode from which start to count
+
+    Returns:
+        a Callable compliant with the callback interface.
+    """
 
     def console_logger_(mode, _, info):
         if mode == 'init':
@@ -28,7 +41,16 @@ def console_logger(start_episode=0):
 
 def log_episodes(path_or_file, close=True, start_episode=0, insert_head=True):
     """
-    Returns a callback that saves a log of episodes
+    Provides a callback for logging on a .csv file.
+
+    Args:
+        path_or_file: path or file where log episodes.
+        close: if close file at the end.
+        start_episode: the number of episode from which start to count
+        insert_head: if print the header of csv file
+
+    Returns:
+        a Callable compliant with the callback interface.
     """
 
     def log_episodes_(mode, f, info):
@@ -62,7 +84,15 @@ def log_episodes(path_or_file, close=True, start_episode=0, insert_head=True):
 
 def save_model(path: str, interval: int, verbose: bool = False):
     """
-    Returns a callback that saves model every :interval: episodes
+    Provides a callback to save the model each `interval` episodes.
+
+    Args:
+        path: path or file where save.
+        interval: interval between each save.
+        verbose: if True prints on stdout a log.
+
+    Returns:
+        a Callable compliant with the callback interface.
     """
 
     def save_model_(mode, counter, info):
@@ -84,7 +114,16 @@ def save_model(path: str, interval: int, verbose: bool = False):
 
 def model_checkpoint(path_dir: str, interval: int, meta: dict = None, start_episode=0):
     """
-    Returns a callback that checkpoints the model
+    Provides a callback to checkpoint the model each `interval` episodes.
+
+    Args:
+        path_dir: directory path where store checkpoints, created if needed.
+        interval: interval between each save.
+        meta: dictionary added to the checkpoint saved.
+        start_episode: the number of episode from which start to count.
+
+    Returns:
+        a Callable compliant with the callback interface.
     """
 
     if not type(meta) is dict:

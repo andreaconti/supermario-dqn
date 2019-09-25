@@ -1,5 +1,5 @@
 """
-training algorithms
+This module provides function to train DQN networks.
 """
 
 from supermario_dqn.env import MarioEnvironment
@@ -15,12 +15,31 @@ import torch.nn.functional as F
 __ALL__ = ['train_dqn']
 
 
-def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(200000), target_net=None,
+def train_dqn(policy_net: torch.nn.Module, target_net: torch.nn.Module, env: MarioEnvironment, memory=RandomReplayMemory(200000),  # noqa
               action_policy=epsilon_greedy_choose(0.9, 0.05, 200), batch_size=128, fit_interval=32,
               gamma=0.98, target_update=15, optimizer_f=optim.Adam, optimizer_state_dict=None, num_episodes=50,
-              device='cpu', train_id=0, callbacks=[]):
+              device='cpu', callbacks=[]):
     """
-    Handles training of network
+    Training of a DQN network.
+
+    Args:
+        policy_net: a pytorch Model able to be feeded with observations in output by `env` and whose
+            output is a 2D torch.Tensor with a line for each observation provided a row for each action
+            available in the env.
+        target_net: instance of target_net, must be an instance of the same class of policy_net
+        env: OpenAI gym environment, specifically must provide `step`, `reset` functions and also
+            `env.action_space.n` which must be equal to the number of rows in output by the network.
+        memory: a custom ReplayMemory.
+        action_policy: used action_policy.
+        batch_size: batch_size used by memory.
+        fit_interval: number of steps between each training phase.
+        gamma: discount ratio.
+        target_update: number of episodes between each update of the target network.
+        optimizer_f: optimizer used during training as provided by pytorch.
+        optimizer_state_dict: useful in order to restore the optimizer.
+        num_episodes: num of episodes of training.
+        device: device used, cpu by default.
+        callbacks: a list of callbacks as provided in callbacks module.
     """
 
     n_actions = len(env.actions)
@@ -36,9 +55,7 @@ def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(
     policy_net.to(device)
 
     # compute target net and instances
-    if target_net is None:
-        target_net = DQN(policy_net._channels, policy_net._height, policy_net._width, policy_net._outputs)
-        target_net.load_state_dict(policy_net.state_dict())
+    target_net.load_state_dict(policy_net.state_dict())
     target_net.to(device)
     target_net.eval()
 
@@ -117,7 +134,6 @@ def train_dqn(policy_net: DQN, env: MarioEnvironment, memory=RandomReplayMemory(
         # call callbacks
         for callback, args in callbacks_.items():
             new_state = callback('run', args, {
-                'train_id': train_id,
                 'model': policy_net,
                 'optimizer': optimizer,
                 'episode': curr_episode,

@@ -102,9 +102,23 @@ _preprocess_map = {
 }
 
 
-def preprocess(world, stage, tensor, resize_h, resize_w):
+def preprocess(world: int, stage: int, frame, resize_h: int, resize_w: int):
     """
-    Preprocess given level frame
+    Preprocessing of a SuperMarioBros frame.
+
+    This function highlights supermario, hide background and
+    reshape the image, is also aware of the world and stage
+    differences.
+
+    Args:
+        world: world from which the frame was obtained.
+        stage: stage from which the frame was obtained.
+        frame: frame.
+        resize_h: output height.
+        resize_w: output width.
+
+    Returns:
+        A new frame with shape [1, resize_h, resize_w]
     """
 
     if world not in range(1, 9):
@@ -112,4 +126,4 @@ def preprocess(world, stage, tensor, resize_h, resize_w):
     if stage not in range(1, 5):
         raise ValueError(f'world in 1..4, not {stage}')
 
-    return _preprocess_map[(world, stage)](tensor, resize_h, resize_w)
+    return _preprocess_map[(world, stage)](frame, resize_h, resize_w)
