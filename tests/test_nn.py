@@ -24,6 +24,6 @@ def test_create_save_load():
 def test_best_action():
     dqn = nn.create([3, 60, 110], 11)
     dqn.requires_grad_(False)
-    choosen = nn.best_action(dqn, torch.randn(3, 60, 110).unsqueeze(0))
+    choosen = nn.best_action(dqn, torch.randn(3, 60, 110))
 
     assert(choosen in range(11))

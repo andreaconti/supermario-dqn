@@ -5,6 +5,7 @@ Test environment utilities
 import supermario_dqn.env as mario_env
 from supermario_dqn.preprocess import preprocess
 import torch
+import pytest
 
 
 def test_reset():
@@ -31,6 +32,8 @@ def test_world_stage():
     state, _, _, _ = env.step(0)
 
 
+
+@pytest.mark.skip(reason='random test')
 def test_random():
     env = mario_env.MarioEnvironment(mario_env.SIMPLE_ACTIONS,
                                      3, lambda w, s, t: preprocess(w, s, t, 35, 60), random=True)
