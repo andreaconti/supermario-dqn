@@ -4,7 +4,6 @@ This module provides function to train DQN networks.
 
 from supermario_dqn.env import MarioEnvironment
 from supermario_dqn.nn.train.memory import RandomReplayMemory, Transition
-from supermario_dqn.nn.model import DQN
 from supermario_dqn.nn.train.exploration import epsilon_greedy_choose
 
 import torch
@@ -16,8 +15,8 @@ __ALL__ = ['train_dqn']
 
 
 def train_dqn(policy_net: torch.nn.Module, target_net: torch.nn.Module, env: MarioEnvironment, memory=RandomReplayMemory(200000),  # noqa
-              action_policy=epsilon_greedy_choose(0.9, 0.05, 200), batch_size=128, fit_interval=32,
-              gamma=0.98, target_update=15, optimizer_f=optim.Adam, optimizer_state_dict=None, num_episodes=50,
+              action_policy=epsilon_greedy_choose(0.9, 0.1, 50000), batch_size=128, fit_interval=32,
+              gamma=0.98, target_update=30, optimizer_f=optim.Adam, optimizer_state_dict=None, num_episodes=50,
               device='cpu', callbacks=[]):
     """
     Training of a DQN network.
@@ -125,11 +124,13 @@ def train_dqn(policy_net: torch.nn.Module, target_net: torch.nn.Module, env: Mar
                 policy_net.train(True)
                 optimize_model()
                 policy_net.train(False)
+                print('train')
 
-            # copy to target
-            if steps_done % target_update == 0:
-                target_net.load_state_dict(policy_net.state_dict())
-                target_net.eval()
+        # copy to target
+        if i_episode % target_update == 0:
+            target_net.load_state_dict(policy_net.state_dict())
+            target_net.eval()
+            print('update target')
 
         # call callbacks
         for callback, args in callbacks_.items():

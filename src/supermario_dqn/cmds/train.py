@@ -104,9 +104,9 @@ def main():
                         help='discount rate used for Q-values learning')
     parser.add_argument('--eps_start', type=float, default=0.9,
                         help='start probability to choose a random action')
-    parser.add_argument('--eps_end', type=float, default=0.25,
+    parser.add_argument('--eps_end', type=float, default=0.15,
                         help='end probability to choose a random action')
-    parser.add_argument('--eps_decay', type=float, default=200,
+    parser.add_argument('--eps_decay', type=float, default=200000,
                         help='decay of eps probabilities')
     parser.add_argument('--target_update', type=int, default=15,
                         help='number of episodes between each target dqn update')
@@ -114,7 +114,7 @@ def main():
                         help='where save trained model')
     parser.add_argument('--memory_size', type=int, default=100000,
                         help='size of replay memory')
-    parser.add_argument('--num_episodes', type=int, default=4000,
+    parser.add_argument('--num_episodes', type=int, default=5000,
                         help='number of games to be played before end')
     parser.add_argument('--resume', type=str, default=None,
                         help='load from a checkpoint')
