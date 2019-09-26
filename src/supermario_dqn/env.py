@@ -18,6 +18,45 @@ State = torch.Tensor
 # Definition of actions spaces
 SIMPLE_ACTIONS = [['right'], ['right', 'A', 'B'], ['right', 'A'], ['left']]
 
+COMPLEX_ACTIONS = [['right'], ['right', 'A'], ['right', 'A', 'B'], ['right', 'B'], ['A'],
+                   ['left'], ['left', 'A'], ['left', 'A', 'B'], ['left', 'B'],
+                   ['NOOP'], ['down']]
+
+
+def _compute_reward():
+
+    curr_score = 0
+    curr_life = None
+    reward = None
+    status = 'small'
+    while True:
+
+        # receive and send
+        info = (yield reward)
+
+        # reset if requested
+        if info is None:
+            curr_life = None
+            curr_score = 0
+        else:
+            # set curr_life
+            if curr_life is None:
+                curr_life = info['life']
+
+            # compute reward
+            reward = -1
+            reward += (info['score'] - curr_score) / 100
+            curr_score = info['score']
+            reward += (curr_life - info['life']) * -30
+            curr_life = info['life']
+
+            if info['status'] != 'small' and status == 'small':
+                status = info['status']
+                reward += 5
+            if info['status'] == 'small' and status != 'small':
+                status = info['status']
+                reward -= 5
+
 
 class MarioEnvironment():
     """
@@ -61,6 +100,8 @@ class MarioEnvironment():
         self._preprocess = preprocess
         self.n_frames = n_frames
         self._actions = actions
+        self._compute_reward = _compute_reward()
+        self._compute_reward.__next__()
 
         self._env_actions = actions
         if ['NOOP'] not in self._env_actions:
@@ -103,6 +144,8 @@ class MarioEnvironment():
             self._env = JoypadSpace(gym.make('SuperMarioBros-{}-{}-v0'.format(self._world, self._stage)), self._env_actions)  # noqa
             frame = self._env.reset()
 
+        self._compute_reward.send(None)
+
         if self._render:
             self._env.render()
 
@@ -120,7 +163,6 @@ class MarioEnvironment():
     def step(self, action: int, original: bool = False, apply_times: int = 3):
 
         noop_action: int = self._env_actions.index(['NOOP'])
-        last_x_pos: int = 0
         last_y_pos: int = 0
         reward = 0
         original_frames = []
@@ -128,10 +170,9 @@ class MarioEnvironment():
         # apply
         for i in range(apply_times):
 
-            frame, reward_, done, info = self._env.step(action)
-            last_x_pos = info['x_pos']
+            frame, _, done, info = self._env.step(action)
             last_y_pos = info['y_pos']
-            reward += reward_
+            reward += self._compute_reward.send(info)
             self._world = info['world']
             self._stage = info['stage']
 
@@ -146,9 +187,8 @@ class MarioEnvironment():
 
         # apply noop action
         if not done and 'A' in self.actions[action] and self._last_y_pos > last_y_pos:
-            frame, reward_, done, info = self._env.step(noop_action)
+            frame, _, done, info = self._env.step(noop_action)
             original_frames.append(frame)
-            reward += reward_
             self._world = info['world']
             self._stage = info['stage']
 
@@ -156,11 +196,6 @@ class MarioEnvironment():
                 self._env.render()
 
         self._last_y_pos = last_y_pos
-
-        # preprocess reward
-        if 'right' in self.actions[action] and 'A' not in self.actions[action] and last_x_pos == self._last_x_pos:
-            reward = -4
-        self._last_x_pos = last_x_pos
 
         # preprocess image
         if self._preprocess is not None:
@@ -172,6 +207,12 @@ class MarioEnvironment():
         # check done
         if self._selected is not None and (self._selected[0] != self._world or self._selected[1] != self._stage):
             done = True
+
+        # strip reward
+        if reward < -30:
+            reward = -30
+        if reward > 30:
+            reward = 30
 
         # return
         if not original:
