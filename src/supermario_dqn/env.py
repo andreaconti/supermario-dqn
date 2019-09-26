@@ -55,7 +55,7 @@ def _compute_reward():
             if done and not info['flag_get'] and delta_life == 0:
                 reward += -30
             else:
-                reward += (curr_life - info['life']) * -30
+                reward += delta_life * -30
             curr_life = info['life']
 
             if done or delta_life > 0:
