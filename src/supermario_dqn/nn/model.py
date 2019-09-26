@@ -57,7 +57,7 @@ class DQN(nn.Module):
         x = F.leaky_relu(self.bn2(self.conv2(x)))
         x = F.leaky_relu(self.bn3(self.conv3(x)))
         x = F.leaky_relu(self.fc1(x.view(x.size(0), -1)))
-        x = F.softsign(self.head(x)) * 15.
+        x = self.head(x)
         return x
 
 
