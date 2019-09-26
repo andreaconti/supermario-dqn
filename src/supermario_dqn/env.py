@@ -27,28 +27,39 @@ def _compute_reward():
 
     curr_score = 0
     curr_life = None
+    curr_x = None
     reward = None
     status = 'small'
     while True:
 
         # receive and send
-        info = (yield reward)
+        info, done = (yield reward)
 
         # reset if requested
         if info is None:
             curr_life = None
+            curr_x = None
             curr_score = 0
         else:
-            # set curr_life
+            # set curr_life and curr_x
             if curr_life is None:
                 curr_life = info['life']
+            if curr_x is None:
+                curr_x = info['x_pos']
 
             # compute reward
-            reward = -1
+            reward = 0
             reward += (info['score'] - curr_score) / 100
             curr_score = info['score']
-            reward += (curr_life - info['life']) * -30
+            delta_life = abs(float(curr_life) - float(info['life']))
+            if done and not info['flag_get'] and delta_life == 0:
+                reward += -30
+            else:
+                reward += (curr_life - info['life']) * -30
             curr_life = info['life']
+
+            if done or delta_life > 0:
+                curr_x = info['life']
 
             if info['status'] != 'small' and status == 'small':
                 status = info['status']
@@ -56,6 +67,9 @@ def _compute_reward():
             if info['status'] == 'small' and status != 'small':
                 status = info['status']
                 reward -= 5
+
+            reward += (info['x_pos'] - curr_x) / 20
+            curr_x = info['x_pos']
 
 
 class MarioEnvironment():
@@ -144,7 +158,7 @@ class MarioEnvironment():
             self._env = JoypadSpace(gym.make('SuperMarioBros-{}-{}-v0'.format(self._world, self._stage)), self._env_actions)  # noqa
             frame = self._env.reset()
 
-        self._compute_reward.send(None)
+        self._compute_reward.send([None, None])
 
         if self._render:
             self._env.render()
@@ -160,6 +174,9 @@ class MarioEnvironment():
         else:
             return torch.stack(tuple(self.frames)), frame
 
+    def close(self):
+        self._env.close()
+
     def step(self, action: int, original: bool = False, apply_times: int = 3):
 
         noop_action: int = self._env_actions.index(['NOOP'])
@@ -172,7 +189,7 @@ class MarioEnvironment():
 
             frame, _, done, info = self._env.step(action)
             last_y_pos = info['y_pos']
-            reward += self._compute_reward.send(info)
+            reward += self._compute_reward.send([info, done])
             self._world = info['world']
             self._stage = info['stage']
 
