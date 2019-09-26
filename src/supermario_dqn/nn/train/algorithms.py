@@ -2,7 +2,6 @@
 This module provides function to train DQN networks.
 """
 
-from supermario_dqn.env import MarioEnvironment
 from supermario_dqn.nn.train.memory import RandomReplayMemory, Transition
 from supermario_dqn.nn.train.exploration import epsilon_greedy_choose
 
@@ -14,8 +13,8 @@ import torch.nn.functional as F
 __ALL__ = ['train_dqn']
 
 
-def train_dqn(policy_net: torch.nn.Module, target_net: torch.nn.Module, env: MarioEnvironment, memory=RandomReplayMemory(200000),  # noqa
-              action_policy=epsilon_greedy_choose(0.9, 0.1, 50000), batch_size=128, fit_interval=32,
+def train_dqn(policy_net: torch.nn.Module, target_net: torch.nn.Module, env, memory=RandomReplayMemory(200000),  # noqa
+              action_policy=epsilon_greedy_choose(0.9, 0.1, 50000), batch_size=128, fit_interval=32, algorithm='deep',
               gamma=0.98, target_update=30, optimizer_f=optim.Adam, optimizer_state_dict=None, num_episodes=50,
               device='cpu', callbacks=[]):
     """
@@ -32,6 +31,7 @@ def train_dqn(policy_net: torch.nn.Module, target_net: torch.nn.Module, env: Mar
         action_policy: used action_policy.
         batch_size: batch_size used by memory.
         fit_interval: number of steps between each training phase.
+        algorithm: optionally can be used 'double' for double-dqn learning.
         gamma: discount ratio.
         target_update: number of episodes between each update of the target network.
         optimizer_f: optimizer used during training as provided by pytorch.
@@ -43,6 +43,7 @@ def train_dqn(policy_net: torch.nn.Module, target_net: torch.nn.Module, env: Mar
 
     n_actions = len(env.actions)
     assert(n_actions == policy_net._outputs)
+    assert(algorithm in ['double', 'deep'])
 
     # active callbacks
     callbacks_ = {}
@@ -78,7 +79,7 @@ def train_dqn(policy_net: torch.nn.Module, target_net: torch.nn.Module, env: Mar
 
         non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
                                                 batch.next_state)), device=device, dtype=torch.bool)
-        non_final_next_states = torch.stack([s for s in batch.next_state if s is not None])
+        non_final_next_states = torch.stack([s for s in batch.next_state if s is not None]).to(device)
         state_batch = torch.stack(batch.state)
         action_batch = torch.cat(batch.action)
         reward_batch = torch.cat(batch.reward)
@@ -86,9 +87,20 @@ def train_dqn(policy_net: torch.nn.Module, target_net: torch.nn.Module, env: Mar
         state_action_values = policy_net(state_batch.to(device))
         state_action_values = state_action_values.gather(1, action_batch)
 
-        next_state_values = torch.zeros(batch_size, device=device)
-        next_state_values[non_final_mask] = target_net(non_final_next_states.to(device)).max(1)[0].detach()
-        expected_state_action_values = (next_state_values * gamma) + reward_batch
+        if algorithm == 'deep':
+            next_state_values = torch.zeros(batch_size, device=device)
+            next_state_values[non_final_mask] = target_net(non_final_next_states).max(1)[0].detach()
+            expected_state_action_values = (next_state_values * gamma) + reward_batch
+        elif algorithm == 'double':
+            next_state_values = torch.zeros(batch_size, device=device)
+            choosen_actions_indices = torch.argmax(policy_net(non_final_next_states), axis=1)
+            next_state_values[non_final_mask] = target_net(non_final_next_states).detach()[
+                torch.arange(0, len(non_final_next_states)),
+                choosen_actions_indices
+            ]
+            expected_state_action_values = (next_state_values * gamma) + reward_batch
+        else:
+            raise ValueError(f'{algorithm} must be deep or double')
 
         loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
 

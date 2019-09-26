@@ -132,6 +132,8 @@ def main():
                         help='each `test` episodes network is used and tested over an episode')
     parser.add_argument('--log', action='store_true',
                         help='logs episodes results')
+    parser.add_argument('--algorithm', default='double',
+                        help='algorithm used for training, double DQN by default but is also possible to use simple "deep"')  # noqa
 
     args = vars(parser.parse_args())
 
