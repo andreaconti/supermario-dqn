@@ -25,15 +25,15 @@ def main(model=None, world_stage=None, skip=1):
         args = vars(parser.parse_args())
 
         env = MarioEnvironment(SIMPLE_ACTIONS,
-                               4, lambda w, s, t: preprocess(w, s, t, 30, 56), world_stage=args['world_stage'])
-        model = nn.create([4, 30, 56], len(SIMPLE_ACTIONS), load_state_from=args['model'], for_train=False)
+                               4, lambda w, s, t: preprocess(w, s, t, 52, 56), world_stage=args['world_stage'])
+        model = nn.create([4, 52, 56], len(SIMPLE_ACTIONS), load_state_from=args['model'], for_train=False)
         model.requires_grad_(False)
         model.eval()
 
         skip_ = args['skip']
         show_processed = args['processed']
     else:
-        env = MarioEnvironment(SIMPLE_ACTIONS, 4, lambda w, s, t: preprocess(w, s, t, 30, 56), world_stage=world_stage)
+        env = MarioEnvironment(SIMPLE_ACTIONS, 4, lambda w, s, t: preprocess(w, s, t, 52, 56), world_stage=world_stage)
 
     # play loop
     done = False
@@ -53,7 +53,7 @@ def main(model=None, world_stage=None, skip=1):
         for state in or_states:
             if i % skip_ == 0:
                 if show_processed:
-                    plt.imshow(preprocess(env.curr_world, env.curr_stage, state, 30, 56), cmap='gray')
+                    plt.imshow(preprocess(env.curr_world, env.curr_stage, state, 52, 56), cmap='gray')
                 else:
                     plt.imshow(state)
                 plt.xlabel(f'reward {reward}')

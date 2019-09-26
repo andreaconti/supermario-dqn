@@ -20,7 +20,7 @@ def _preprocess1(tensor, resize_h, resize_w):
     """
     background = 104
 
-    state_ = tensor[70:210, :, 0]  # crop and red signal
+    state_ = tensor[:, :, 0]  # red signal
     state_[state_ == _mario_dress] = 255
     state_[state_ == _mario_skin] = 255
     state_[state_ == _mario_other] = 255
@@ -38,7 +38,7 @@ def _preprocess2(tensor, resize_h, resize_w):
     levels with black background and blue ground
     """
 
-    state_ = tensor[70:210, :, 0] + tensor[70:210, :, 2]
+    state_ = tensor[:, :, 0] + tensor[:, :, 2]
     state_[state_ == _mario_dress] = 255
     state_[state_ == _mario_skin] = 255
     state_[state_ == _mario_other] = 255
@@ -54,7 +54,7 @@ def _preprocess3(tensor, resize_h, resize_w):
     """
     levels with black background and grey ground or sea
     """
-    state_ = tensor[70:210, :, 0]  # crop and red signal
+    state_ = tensor[:, :, 0]  # crop and red signal
     state_[state_ == _mario_dress] = 255
     state_[state_ == _mario_skin] = 255
     state_[state_ == _mario_other] = 255

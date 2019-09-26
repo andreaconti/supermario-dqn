@@ -36,7 +36,7 @@ def _create_and_train(proc_index, device, model, target_net, args):
         choosen_actions = checkpoint['actions']
 
     # define environment
-    env = MarioEnvironment(choosen_actions, 4, lambda w, s, t: pr.preprocess(w, s, t, 30, 56),
+    env = MarioEnvironment(choosen_actions, 4, lambda w, s, t: pr.preprocess(w, s, t, 52, 56),
                            random=args.pop('random'),
                            render=args.pop('render'),
                            world_stage=args.pop('world_stage'))
@@ -163,6 +163,6 @@ def main():
         return
 
     # create environment, DQN and start training
-    policy_net = nn.create([4, 30, 56], len(_actions), for_train=True)
-    target_net = nn.create([4, 30, 56], len(_actions), for_train=False)
+    policy_net = nn.create([4, 52, 56], len(_actions), for_train=True)
+    target_net = nn.create([4, 52, 56], len(_actions), for_train=False)
     _create_and_train(None, device, policy_net, target_net, args)
