@@ -58,9 +58,6 @@ def _compute_reward():
                 reward += delta_life * -30
             curr_life = info['life']
 
-            if done or delta_life > 0:
-                curr_x = info['life']
-
             if info['status'] != 'small' and status == 'small':
                 status = info['status']
                 reward += 5
