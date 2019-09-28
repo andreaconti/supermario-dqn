@@ -90,3 +90,17 @@ optional arguments:
 The reward function used takes into account the game score, how much Mario moves 
 to the right, Mario status and penalizes deaths.
 
+## Neural Network Model
+
+For training is used plain Double DQN with simple random replay memory and a network composed by 3 CNN layers and a FC 512 neurons layer
+
+## Action space
+
+'right', 'right A B', 'right A', 'left'
+
+## Example results
+
+After a training of 3-4h with an i9-9900K and a GeForce 2080 on the first stage of the first level Mario achieves the
+flag:
+
+![train results](trained/train_1_1-v0/learning.png)
