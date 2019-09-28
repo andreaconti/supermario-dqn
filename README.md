@@ -28,6 +28,7 @@ usage: supermario_train [-h] [--batch_size BATCH_SIZE]
                         [--checkpoint CHECKPOINT] [--random] [--render]
                         [--world_stage WORLD_STAGE WORLD_STAGE]
                         [--actions ACTIONS] [--test TEST] [--log]
+                        [--algorithm ALGORITHM]
 
 Handle training
 
@@ -62,6 +63,9 @@ optional arguments:
   --test TEST           each `test` episodes network is used and tested over
                         an episode
   --log                 logs episodes results
+  --algorithm ALGORITHM
+                        algorithm used for training, 'double' DQN by default but
+                        is also possible to use simple "deep"
 
 # play
 $ supermario_play -h
@@ -81,12 +85,8 @@ optional arguments:
   --processed           shows frames processed for neural network
 ~~~
 
-### Results
+## Reward Function
 
-~~~bash
-$ supermario_play --skip 5 --world_stage 1 1 trained/train_1_1/model.pt
-~~~
+The reward function used takes into account the game score, how much Mario moves 
+to the right, Mario status and penalizes deaths.
 
-| rewards | play gif |
-|---------|----------|
-|![](trained/train_1_1/rewards_over_steps.png)| ![](trained/train_1_1/play_gif.png)|
